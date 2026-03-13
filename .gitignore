@@ -1,0 +1,17 @@
+# Xcode
+*.xcodeproj/
+!*.xcodeproj/project.pbxproj
+xcuserdata/
+DerivedData/
+build/
+*.xcworkspace
+
+# macOS
+.DS_Store
+.superpowers/
+
+# Dependencies
+node_modules/
+
+# Claude
+.claude/

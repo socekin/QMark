@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="libs/katex.min.css">
+    <link rel="stylesheet" href="libs/github.min.css" id="hljs-light">
+    <link rel="stylesheet" href="libs/github-dark.min.css" id="hljs-dark">
+    <link rel="stylesheet" href="style.css">
+    <script src="libs/highlight.min.js"></script>
+    <script src="libs/katex.min.js"></script>
+    <script src="libs/markdown-it.min.js"></script>
+    <script src="libs/markdown-it-footnote.min.js"></script>
+    <script src="libs/markdown-it-sub.min.js"></script>
+    <script src="libs/markdown-it-sup.min.js"></script>
+    <script src="libs/markdown-it-mark.min.js"></script>
+    <script src="libs/markdown-it-deflist.min.js"></script>
+    <script src="libs/markdown-it-task-lists.min.js"></script>
+    <script src="libs/markdown-it-texmath.js"></script>
+    <script src="libs/markdown-it-anchor.min.js"></script>
+    <script src="libs/markdown-it-toc-done-right.min.js"></script>
+    <script src="libs/mermaid.min.js"></script>
+    <script src="renderer.js"></script>
+</head>
+<body>
+    <article id="content"></article>
+    <script>
+        // highlight.js theme toggle
+        function updateHljsTheme() {
+            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.getElementById('hljs-light').disabled = isDark;
+            document.getElementById('hljs-dark').disabled = !isDark;
+        }
+        updateHljsTheme();
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateHljsTheme);
+
+        initRenderer();
+    </script>
+</body>
+</html>

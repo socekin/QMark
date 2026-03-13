@@ -1,0 +1,147 @@
+name: QMark
+options:
+  bundleIdPrefix: com.qmark
+  deploymentTarget:
+    macOS: "26.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "26.0"
+    ENABLE_HARDENED_RUNTIME: true
+
+targets:
+  QMark:
+    type: application
+    platform: macOS
+    sources:
+      - path: QMark
+        type: group
+      - path: SharedRenderer
+        type: folder
+        buildPhase: resources
+      - path: EditorRenderer
+        type: folder
+        buildPhase: resources
+    entitlements:
+      path: QMark.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.files.user-selected.read-write: true
+        com.apple.security.network.client: true
+    info:
+      path: QMark/Info.plist
+      properties:
+        CFBundleDocumentTypes:
+          - CFBundleTypeRole: Editor
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - net.daringfireball.markdown
+              - com.qmark.mdx
+              - com.qmark.rmd
+              - com.qmark.mdown
+              - com.qmark.mkd
+        UTImportedTypeDeclarations:
+          - UTTypeIdentifier: com.qmark.mdx
+            UTTypeDescription: MDX Document
+            UTTypeConformsTo:
+              - public.plain-text
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - mdx
+          - UTTypeIdentifier: com.qmark.rmd
+            UTTypeDescription: R Markdown Document
+            UTTypeConformsTo:
+              - public.plain-text
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - rmd
+          - UTTypeIdentifier: com.qmark.mdown
+            UTTypeDescription: Markdown Document
+            UTTypeConformsTo:
+              - public.plain-text
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - mdown
+          - UTTypeIdentifier: com.qmark.mkd
+            UTTypeDescription: Markdown Document
+            UTTypeConformsTo:
+              - public.plain-text
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - mkd
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.qmark.app
+        PRODUCT_NAME: QMark
+        INFOPLIST_FILE: QMark/Info.plist
+        CODE_SIGN_ENTITLEMENTS: QMark.entitlements
+        GENERATE_INFOPLIST_FILE: false
+    dependencies:
+      - target: QMarkQuickLook
+
+  QMarkQuickLook:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: QMarkQuickLook
+        type: group
+      - path: SharedRenderer
+        type: folder
+        buildPhase: resources
+    entitlements:
+      path: QMarkQuickLook/QMarkQuickLook.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+    info:
+      path: QMarkQuickLook/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.quicklook.preview
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PreviewViewController
+        QLSupportedContentTypes:
+          - net.daringfireball.markdown
+          - com.qmark.mdx
+          - com.qmark.rmd
+          - com.qmark.mdown
+          - com.qmark.mkd
+        QLSupportsSearchableItems: false
+        UTImportedTypeDeclarations:
+          - UTTypeIdentifier: com.qmark.mdx
+            UTTypeDescription: MDX Document
+            UTTypeConformsTo:
+              - public.plain-text
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - mdx
+          - UTTypeIdentifier: com.qmark.rmd
+            UTTypeDescription: R Markdown Document
+            UTTypeConformsTo:
+              - public.plain-text
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - rmd
+          - UTTypeIdentifier: com.qmark.mdown
+            UTTypeDescription: Markdown Document
+            UTTypeConformsTo:
+              - public.plain-text
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - mdown
+          - UTTypeIdentifier: com.qmark.mkd
+            UTTypeDescription: Markdown Document
+            UTTypeConformsTo:
+              - public.plain-text
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - mkd
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.qmark.app.quicklook
+        PRODUCT_NAME: QMarkQuickLook
+        INFOPLIST_FILE: QMarkQuickLook/Info.plist
+        CODE_SIGN_ENTITLEMENTS: QMarkQuickLook/QMarkQuickLook.entitlements
+        GENERATE_INFOPLIST_FILE: false
