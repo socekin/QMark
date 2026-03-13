@@ -129,9 +129,39 @@ const editor = new EditorView({
                 }
             }),
             EditorView.theme({
-                "&": {height: "100%"},
+                "&": {
+                    height: "100%",
+                    backgroundColor: isDark ? "#0d1117" : "#ffffff",
+                    color: isDark ? "#c9d1d9" : "#24292f",
+                },
                 ".cm-scroller": {overflow: "auto"},
-            }),
+                ".cm-gutters": {
+                    backgroundColor: isDark ? "#0d1117" : "#ffffff",
+                    color: isDark ? "#6e7681" : "#8c959f",
+                    borderRight: isDark ? "1px solid #30363d" : "1px solid #d0d7de",
+                },
+                ".cm-activeLineGutter": {
+                    backgroundColor: isDark ? "#6e76811a" : "#eaeef27f",
+                },
+                ".cm-activeLine": {
+                    backgroundColor: isDark ? "#6e76811a" : "#eaeef27f",
+                },
+                ".cm-cursor, .cm-dropCursor": {
+                    borderLeftColor: isDark ? "#58a6ff" : "#0a69da",
+                },
+                "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+                    background: isDark ? "#264f78" : "#add6ff",
+                },
+                "> .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+                    background: isDark ? "#264f78" : "#add6ff",
+                },
+                ".cm-content ::selection": {
+                    background: isDark ? "#264f78" : "#add6ff",
+                },
+                ".cm-selectionMatch": {
+                    background: isDark ? "#3fb95040" : "#4ac26b40",
+                },
+            }, {dark: isDark}),
         ],
     }),
 });
