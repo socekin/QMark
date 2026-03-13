@@ -1,5 +1,5 @@
 // 从全局对象 CM 获取 CodeMirror 模块（由 codemirror.min.js IIFE 注入 window.CM）
-const {EditorView, EditorState, basicSetup, keymap, markdown, markdownLanguage, languages} = window.CM;
+const {EditorView, EditorState, basicSetup, keymap, markdown, markdownLanguage, languages, HighlightStyle, syntaxHighlighting, tags} = window.CM;
 
 // ── Debounce helper ──
 function debounce(fn, ms) {
@@ -67,6 +67,51 @@ function setupScrollSync(view) {
 // ── Swift → JS API state ──
 let suppressChangeNotification = false;
 
+// ── 语法高亮主题（匹配 MarkEdit GitHub Light/Dark） ──
+const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+const lightHighlight = HighlightStyle.define([
+    {tag: tags.heading, color: "#0550ae", fontWeight: "bold"},
+    {tag: tags.strong, fontWeight: "bold"},
+    {tag: tags.emphasis, fontStyle: "italic"},
+    {tag: tags.strikethrough, textDecoration: "line-through"},
+    {tag: tags.link, color: "#0a3069", textDecoration: "underline"},
+    {tag: tags.url, color: "#24292f"},
+    {tag: tags.quote, color: "#116329", fontStyle: "italic"},
+    {tag: [tags.list], color: "#953800"},
+    {tag: tags.monospace, backgroundColor: "#afb8c133"},
+    {tag: [tags.meta, tags.comment], color: "#6e7781", fontStyle: "italic"},
+    {tag: tags.keyword, color: "#cf222e"},
+    {tag: [tags.string, tags.special(tags.string), tags.regexp, tags.escape], color: "#0a3069"},
+    {tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: "#8250df"},
+    {tag: [tags.literal, tags.inserted, tags.tagName], color: "#116329"},
+    {tag: [tags.deleted, tags.macroName], color: "#82071e"},
+    {tag: [tags.className, tags.definition(tags.propertyName), tags.definition(tags.typeName)], color: "#953800"},
+    {tag: tags.invalid, color: "#ff0000"},
+]);
+
+const darkHighlight = HighlightStyle.define([
+    {tag: tags.heading, color: "#79c0ff", fontWeight: "bold"},
+    {tag: tags.strong, fontWeight: "bold"},
+    {tag: tags.emphasis, fontStyle: "italic"},
+    {tag: tags.strikethrough, textDecoration: "line-through"},
+    {tag: tags.link, color: "#a5d6ff", textDecoration: "underline"},
+    {tag: tags.url, color: "#c9d1d9"},
+    {tag: tags.quote, color: "#7ee787", fontStyle: "italic"},
+    {tag: [tags.list], color: "#ffa657"},
+    {tag: tags.monospace, backgroundColor: "#484f5866"},
+    {tag: [tags.meta, tags.comment], color: "#8b949e", fontStyle: "italic"},
+    {tag: tags.keyword, color: "#ff7b72"},
+    {tag: [tags.string, tags.special(tags.string), tags.regexp, tags.escape], color: "#a5d6ff"},
+    {tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: "#d2a8ff"},
+    {tag: [tags.literal, tags.inserted, tags.tagName], color: "#7ee787"},
+    {tag: [tags.deleted, tags.macroName], color: "#ffa198"},
+    {tag: [tags.className, tags.definition(tags.propertyName), tags.definition(tags.typeName)], color: "#ffa657"},
+    {tag: tags.invalid, color: "#ff0000"},
+]);
+
+const activeHighlight = isDark ? darkHighlight : lightHighlight;
+
 // ── Initialize CodeMirror ──
 const editor = new EditorView({
     parent: document.getElementById("editor"),
@@ -74,8 +119,10 @@ const editor = new EditorView({
         doc: "",
         extensions: [
             basicSetup,
+            syntaxHighlighting(activeHighlight),
             markdown({base: markdownLanguage, codeLanguages: languages}),
             markdownKeymap,
+            EditorView.lineWrapping,
             EditorView.updateListener.of((update) => {
                 if (update.docChanged && !suppressChangeNotification) {
                     notifyContentChanged(update.state.doc.toString());

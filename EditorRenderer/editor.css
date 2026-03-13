@@ -19,7 +19,7 @@
 
 .cm-editor .cm-gutters {
     background-color: #ffffff;
-    color: rgba(36, 41, 47, 0.3);
+    color: #8c959f;
     border-right: 1px solid #d0d7de;
 }
 
@@ -32,12 +32,12 @@
 }
 
 .cm-editor .cm-cursor {
-    border-left-color: #24292f;
+    border-left-color: #0a69da;
 }
 
 .cm-editor .cm-selectionBackground,
 .cm-editor.cm-focused .cm-selectionBackground {
-    background-color: #b6d7ff;
+    background-color: #add6ff;
 }
 
 /* ── Dark theme ── */
@@ -49,7 +49,7 @@
 
     .cm-editor .cm-gutters {
         background-color: #0d1117;
-        color: rgba(201, 209, 217, 0.3);
+        color: #6e7681;
         border-right: 1px solid #30363d;
     }
 
@@ -62,7 +62,7 @@
     }
 
     .cm-editor .cm-cursor {
-        border-left-color: #c9d1d9;
+        border-left-color: #58a6ff;
     }
 
     .cm-editor .cm-selectionBackground,

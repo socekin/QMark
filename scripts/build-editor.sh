@@ -29,8 +29,10 @@ import {EditorState} from "@codemirror/state"
 import {keymap} from "@codemirror/view"
 import {markdown, markdownLanguage} from "@codemirror/lang-markdown"
 import {languages} from "@codemirror/language-data"
+import {HighlightStyle, syntaxHighlighting} from "@codemirror/language"
+import {tags} from "@lezer/highlight"
 
-window.CM = {EditorView, EditorState, basicSetup, keymap, markdown, markdownLanguage, languages}
+window.CM = {EditorView, EditorState, basicSetup, keymap, markdown, markdownLanguage, languages, HighlightStyle, syntaxHighlighting, tags}
 ENTRY
 
 echo "==> Bundling with esbuild..."
