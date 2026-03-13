@@ -116,7 +116,7 @@ function buildEditorTheme(dark) {
             backgroundColor: dark ? "#0d1117" : "#ffffff",
             color: dark ? "#c9d1d9" : "#24292f",
         },
-        ".cm-scroller": {overflow: "auto"},
+        ".cm-scroller": {overflow: "auto", colorScheme: dark ? "dark" : "light"},
         ".cm-gutters": {
             backgroundColor: dark ? "#0d1117" : "#ffffff",
             color: dark ? "#6e7681" : "#8c959f",
