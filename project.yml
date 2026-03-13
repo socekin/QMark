@@ -79,6 +79,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.qmark.app
         PRODUCT_NAME: QMark
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_FILE: QMark/Info.plist
         CODE_SIGN_ENTITLEMENTS: QMark.entitlements
         GENERATE_INFOPLIST_FILE: false
