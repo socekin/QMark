@@ -1,5 +1,5 @@
 // 从全局对象 CM 获取 CodeMirror 模块（由 codemirror.min.js IIFE 注入 window.CM）
-const {EditorView, EditorState, basicSetup, keymap, markdown, markdownLanguage, languages, HighlightStyle, syntaxHighlighting, tags} = window.CM;
+const {EditorView, EditorState, Compartment, basicSetup, keymap, markdown, markdownLanguage, languages, HighlightStyle, syntaxHighlighting, tags} = window.CM;
 
 // ── Debounce helper ──
 function debounce(fn, ms) {
@@ -67,9 +67,7 @@ function setupScrollSync(view) {
 // ── Swift → JS API state ──
 let suppressChangeNotification = false;
 
-// ── 语法高亮主题（匹配 MarkEdit GitHub Light/Dark） ──
-const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-
+// ── 语法高亮定义（匹配 MarkEdit GitHub Light/Dark） ──
 const lightHighlight = HighlightStyle.define([
     {tag: tags.heading, color: "#0550ae", fontWeight: "bold"},
     {tag: tags.strong, fontWeight: "bold"},
@@ -110,7 +108,49 @@ const darkHighlight = HighlightStyle.define([
     {tag: tags.invalid, color: "#ff0000"},
 ]);
 
-const activeHighlight = isDark ? darkHighlight : lightHighlight;
+// ── 编辑器主题构建函数 ──
+function buildEditorTheme(dark) {
+    return EditorView.theme({
+        "&": {
+            height: "100%",
+            backgroundColor: dark ? "#0d1117" : "#ffffff",
+            color: dark ? "#c9d1d9" : "#24292f",
+        },
+        ".cm-scroller": {overflow: "auto"},
+        ".cm-gutters": {
+            backgroundColor: dark ? "#0d1117" : "#ffffff",
+            color: dark ? "#6e7681" : "#8c959f",
+            borderRight: dark ? "1px solid #30363d" : "1px solid #d0d7de",
+        },
+        ".cm-activeLineGutter": {
+            backgroundColor: dark ? "#6e76811a" : "#eaeef27f",
+        },
+        ".cm-activeLine": {
+            backgroundColor: dark ? "#6e76811a" : "#eaeef27f",
+        },
+        ".cm-cursor, .cm-dropCursor": {
+            borderLeftColor: dark ? "#58a6ff" : "#0a69da",
+        },
+        "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+            background: dark ? "#264f78" : "#add6ff",
+        },
+        "> .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+            background: dark ? "#264f78" : "#add6ff",
+        },
+        ".cm-content ::selection": {
+            background: dark ? "#264f78" : "#add6ff",
+        },
+        ".cm-selectionMatch": {
+            background: dark ? "#3fb95040" : "#4ac26b40",
+        },
+    }, {dark: dark});
+}
+
+// ── 使用 Compartment 实现动态主题切换 ──
+const themeCompartment = new Compartment();
+const highlightCompartment = new Compartment();
+
+let isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
 // ── Initialize CodeMirror ──
 const editor = new EditorView({
@@ -119,7 +159,7 @@ const editor = new EditorView({
         doc: "",
         extensions: [
             basicSetup,
-            syntaxHighlighting(activeHighlight),
+            highlightCompartment.of(syntaxHighlighting(isDark ? darkHighlight : lightHighlight)),
             markdown({base: markdownLanguage, codeLanguages: languages}),
             markdownKeymap,
             EditorView.lineWrapping,
@@ -128,45 +168,23 @@ const editor = new EditorView({
                     notifyContentChanged(update.state.doc.toString());
                 }
             }),
-            EditorView.theme({
-                "&": {
-                    height: "100%",
-                    backgroundColor: isDark ? "#0d1117" : "#ffffff",
-                    color: isDark ? "#c9d1d9" : "#24292f",
-                },
-                ".cm-scroller": {overflow: "auto"},
-                ".cm-gutters": {
-                    backgroundColor: isDark ? "#0d1117" : "#ffffff",
-                    color: isDark ? "#6e7681" : "#8c959f",
-                    borderRight: isDark ? "1px solid #30363d" : "1px solid #d0d7de",
-                },
-                ".cm-activeLineGutter": {
-                    backgroundColor: isDark ? "#6e76811a" : "#eaeef27f",
-                },
-                ".cm-activeLine": {
-                    backgroundColor: isDark ? "#6e76811a" : "#eaeef27f",
-                },
-                ".cm-cursor, .cm-dropCursor": {
-                    borderLeftColor: isDark ? "#58a6ff" : "#0a69da",
-                },
-                "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
-                    background: isDark ? "#264f78" : "#add6ff",
-                },
-                "> .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
-                    background: isDark ? "#264f78" : "#add6ff",
-                },
-                ".cm-content ::selection": {
-                    background: isDark ? "#264f78" : "#add6ff",
-                },
-                ".cm-selectionMatch": {
-                    background: isDark ? "#3fb95040" : "#4ac26b40",
-                },
-            }, {dark: isDark}),
+            themeCompartment.of(buildEditorTheme(isDark)),
         ],
     }),
 });
 
 setupScrollSync(editor);
+
+// ── 监听系统主题切换，动态更新编辑器 ──
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+    isDark = e.matches;
+    editor.dispatch({
+        effects: [
+            themeCompartment.reconfigure(buildEditorTheme(isDark)),
+            highlightCompartment.reconfigure(syntaxHighlighting(isDark ? darkHighlight : lightHighlight)),
+        ],
+    });
+});
 
 // ── Swift → JS API ──
 // These functions are called via WKWebView.callAsyncJavaScript()

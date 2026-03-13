@@ -25,14 +25,14 @@ echo "==> Creating entry point..."
 cat > entry.js << 'ENTRY'
 // Expose CodeMirror modules as a global object for non-module usage in WKWebView
 import {EditorView, basicSetup} from "codemirror"
-import {EditorState} from "@codemirror/state"
+import {EditorState, Compartment} from "@codemirror/state"
 import {keymap} from "@codemirror/view"
 import {markdown, markdownLanguage} from "@codemirror/lang-markdown"
 import {languages} from "@codemirror/language-data"
 import {HighlightStyle, syntaxHighlighting} from "@codemirror/language"
 import {tags} from "@lezer/highlight"
 
-window.CM = {EditorView, EditorState, basicSetup, keymap, markdown, markdownLanguage, languages, HighlightStyle, syntaxHighlighting, tags}
+window.CM = {EditorView, EditorState, Compartment, basicSetup, keymap, markdown, markdownLanguage, languages, HighlightStyle, syntaxHighlighting, tags}
 ENTRY
 
 echo "==> Bundling with esbuild..."
