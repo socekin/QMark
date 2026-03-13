@@ -4,6 +4,7 @@ import WebKit
 struct PreviewView: NSViewRepresentable {
     let markdown: String
     let scrollPercentage: CGFloat
+    var isDark: Bool = false
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -34,6 +35,12 @@ struct PreviewView: NSViewRepresentable {
     func updateNSView(_ webView: WKWebView, context: Context) {
         let coordinator = context.coordinator
 
+        // 直接在 WKWebView 上设置外观，强制 CSS 媒体查询立即重新评估
+        if isDark != coordinator.lastIsDark {
+            coordinator.lastIsDark = isDark
+            webView.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
+        }
+
         if coordinator.isPageLoaded {
             if coordinator.lastRenderedMarkdown != markdown {
                 coordinator.lastRenderedMarkdown = markdown
@@ -58,6 +65,7 @@ struct PreviewView: NSViewRepresentable {
         var isPageLoaded = false
         var pendingMarkdown: String?
         var lastRenderedMarkdown: String?
+        var lastIsDark: Bool?
         var lastScrollPercentage: CGFloat = 0
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {

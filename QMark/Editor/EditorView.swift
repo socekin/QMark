@@ -3,6 +3,7 @@ import WebKit
 
 struct EditorView: NSViewRepresentable {
     @ObservedObject var document: MarkdownDocument
+    var isDark: Bool = false
     var onTextChange: ((String) -> Void)?
     var onScrollChange: ((CGFloat) -> Void)?
 
@@ -36,8 +37,8 @@ struct EditorView: NSViewRepresentable {
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
-        // 处理外部修改（如文件 revert）
         context.coordinator.syncIfNeeded(document.text)
+        context.coordinator.refreshThemeIfNeeded(isDark, webView: webView)
     }
 
     static func dismantleNSView(_ webView: WKWebView, coordinator: Coordinator) {
@@ -59,6 +60,7 @@ struct EditorView: NSViewRepresentable {
         private var pendingContent: String?
         private var lastSentContent: String?
         private var isSyncingFromJS = false
+        private var lastIsDark: Bool?
 
         init(_ parent: EditorView) {
             self.parent = parent
@@ -82,6 +84,17 @@ struct EditorView: NSViewRepresentable {
                 in: .page,
                 completionHandler: nil
             )
+        }
+
+        /// 主动通知编辑器切换主题（不依赖 matchMedia change 事件）
+        func refreshThemeIfNeeded(_ isDark: Bool, webView: WKWebView) {
+            guard isDark != lastIsDark else { return }
+            lastIsDark = isDark
+            // 直接设置 WKWebView 外观
+            webView.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
+            // 同时通过 JS 通知 CodeMirror 切换主题
+            guard isEditorReady else { return }
+            webView.evaluateJavaScript("setTheme(\(isDark))")
         }
 
         /// 处理外部修改（如文件 revert）— 从 updateNSView 调用

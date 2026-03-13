@@ -189,6 +189,16 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e)
 // ── Swift → JS API ──
 // These functions are called via WKWebView.callAsyncJavaScript()
 
+window.setTheme = function(dark) {
+    isDark = dark;
+    editor.dispatch({
+        effects: [
+            themeCompartment.reconfigure(buildEditorTheme(isDark)),
+            highlightCompartment.reconfigure(syntaxHighlighting(isDark ? darkHighlight : lightHighlight)),
+        ],
+    });
+};
+
 window.setContent = function(text) {
     suppressChangeNotification = true;
     editor.dispatch({
