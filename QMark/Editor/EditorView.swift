@@ -7,7 +7,7 @@ struct EditorView: NSViewRepresentable {
     var onTextChange: ((String) -> Void)?
     var onScrollChange: ((CGFloat) -> Void)?
 
-    func makeNSView(context: Context) -> WKWebView {
+    func makeNSView(context: Context) -> CleanWebView {
         let config = WKWebViewConfiguration()
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
 
@@ -17,7 +17,7 @@ struct EditorView: NSViewRepresentable {
         contentController.add(context.coordinator, name: "contentChanged")
         contentController.add(context.coordinator, name: "scrollChanged")
 
-        let webView = WKWebView(frame: .zero, configuration: config)
+        let webView = CleanWebView(frame: .zero, configuration: config)
         webView.setValue(false, forKey: "drawsBackground")
         context.coordinator.webView = webView
 
@@ -36,12 +36,12 @@ struct EditorView: NSViewRepresentable {
         return webView
     }
 
-    func updateNSView(_ webView: WKWebView, context: Context) {
+    func updateNSView(_ webView: CleanWebView, context: Context) {
         context.coordinator.syncIfNeeded(document.text)
         context.coordinator.refreshThemeIfNeeded(isDark, webView: webView)
     }
 
-    static func dismantleNSView(_ webView: WKWebView, coordinator: Coordinator) {
+    static func dismantleNSView(_ webView: CleanWebView, coordinator: Coordinator) {
         let controller = webView.configuration.userContentController
         controller.removeScriptMessageHandler(forName: "editorReady")
         controller.removeScriptMessageHandler(forName: "contentChanged")

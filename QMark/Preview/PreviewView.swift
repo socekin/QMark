@@ -6,7 +6,7 @@ struct PreviewView: NSViewRepresentable {
     let scrollPercentage: CGFloat
     var isDark: Bool = false
 
-    func makeNSView(context: Context) -> WKWebView {
+    func makeNSView(context: Context) -> CleanWebView {
         let config = WKWebViewConfiguration()
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
 
@@ -17,7 +17,8 @@ struct PreviewView: NSViewRepresentable {
         }
         context.coordinator.bridge = bridge
 
-        let webView = WKWebView(frame: .zero, configuration: config)
+        let webView = CleanWebView(frame: .zero, configuration: config)
+        webView.isReadOnly = true
         webView.setValue(false, forKey: "drawsBackground")
         context.coordinator.webView = webView
 
@@ -32,7 +33,7 @@ struct PreviewView: NSViewRepresentable {
         return webView
     }
 
-    func updateNSView(_ webView: WKWebView, context: Context) {
+    func updateNSView(_ webView: CleanWebView, context: Context) {
         let coordinator = context.coordinator
 
         // 直接在 WKWebView 上设置外观，强制 CSS 媒体查询立即重新评估
