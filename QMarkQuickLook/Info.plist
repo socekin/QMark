@@ -20,21 +20,25 @@
 	<string>1</string>
 	<key>NSExtension</key>
 	<dict>
+		<key>NSExtensionAttributes</key>
+		<dict>
+			<key>QLSupportedContentTypes</key>
+			<array>
+				<string>net.daringfireball.markdown</string>
+				<string>com.unknown.md</string>
+				<string>com.qmark.mdx</string>
+				<string>com.qmark.rmd</string>
+				<string>com.qmark.mdown</string>
+				<string>com.qmark.mkd</string>
+			</array>
+			<key>QLSupportsSearchableItems</key>
+			<false/>
+		</dict>
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.quicklook.preview</string>
 		<key>NSExtensionPrincipalClass</key>
-		<string>$(PRODUCT_MODULE_NAME).PreviewViewController</string>
+		<string>QMarkQuickLook.PreviewViewController</string>
 	</dict>
-	<key>QLSupportedContentTypes</key>
-	<array>
-		<string>net.daringfireball.markdown</string>
-		<string>com.qmark.mdx</string>
-		<string>com.qmark.rmd</string>
-		<string>com.qmark.mdown</string>
-		<string>com.qmark.mkd</string>
-	</array>
-	<key>QLSupportsSearchableItems</key>
-	<false/>
 	<key>UTImportedTypeDeclarations</key>
 	<array>
 		<dict>

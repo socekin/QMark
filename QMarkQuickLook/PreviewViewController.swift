@@ -14,63 +14,95 @@ class PreviewViewController: NSViewController, @preconcurrency QLPreviewingContr
     }
 
     func preparePreviewOfFile(at url: URL, completionHandler handler: @escaping (Error?) -> Void) {
-        // Hide WebView until new content loads to avoid flicker
-        webView.isHidden = true
-
-        // Read Markdown file
         guard let markdownData = try? Data(contentsOf: url),
               let markdownText = String(data: markdownData, encoding: .utf8) else {
-            handler(CocoaError(.fileReadCorruptFile))
+            handler(NSError(domain: "QMarkQuickLook", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Cannot read file"
+            ]))
             return
         }
 
-        // Load SharedRenderer template
-        guard let templateURL = Bundle(for: type(of: self)).url(
-            forResource: "template",
-            withExtension: "html",
-            subdirectory: "SharedRenderer"
-        ) else {
-            handler(CocoaError(.fileReadNoSuchFile))
-            return
+        let html = buildSelfContainedHTML(markdown: markdownText)
+        webView.loadHTMLString(html, baseURL: nil)
+        handler(nil)
+    }
+
+    /// 构建自包含 HTML，内联核心 JS/CSS，无外部文件依赖
+    private func buildSelfContainedHTML(markdown: String) -> String {
+        let bundle = Bundle(for: type(of: self))
+        let dir = "SharedRenderer"
+
+        let markdownItJS = readBundleFile(bundle, dir: dir, name: "libs/markdown-it.min", ext: "js")
+        let highlightJS = readBundleFile(bundle, dir: dir, name: "libs/highlight.min", ext: "js")
+        let styleCSS = readBundleFile(bundle, dir: dir, name: "style", ext: "css")
+        let hljsLightCSS = readBundleFile(bundle, dir: dir, name: "libs/github.min", ext: "css")
+        let hljsDarkCSS = readBundleFile(bundle, dir: dir, name: "libs/github-dark.min", ext: "css")
+
+        let escapedMarkdown = escapeForJSString(markdown)
+
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>\(hljsLightCSS)</style>
+            <style id="hljs-dark" media="(prefers-color-scheme: dark)">\(hljsDarkCSS)</style>
+            <style>\(styleCSS)</style>
+            <script>\(markdownItJS)</script>
+            <script>\(highlightJS)</script>
+        </head>
+        <body>
+            <article id="content"></article>
+            <script>
+            (function() {
+                var md = window.markdownit({
+                    html: false,
+                    linkify: true,
+                    typographer: true,
+                    highlight: function(str, lang) {
+                        if (lang && hljs.getLanguage(lang)) {
+                            try {
+                                return '<pre class="hljs"><code>' +
+                                    hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
+                                    '</code></pre>';
+                            } catch (_) {}
+                        }
+                        return '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + '</code></pre>';
+                    }
+                });
+                var text = "\(escapedMarkdown)";
+                document.getElementById('content').innerHTML = md.render(text);
+            })();
+            </script>
+        </body>
+        </html>
+        """
+    }
+
+    private func readBundleFile(_ bundle: Bundle, dir: String, name: String, ext: String) -> String {
+        guard let url = bundle.url(forResource: name, withExtension: ext, subdirectory: dir),
+              let content = try? String(contentsOf: url, encoding: .utf8) else {
+            return ""
         }
-
-        // Load template page
-        webView.loadFileURL(templateURL, allowingReadAccessTo: templateURL.deletingLastPathComponent())
-
-        // Render Markdown after page loads
-        let coordinator = QuickLookCoordinator(markdownText: markdownText, completionHandler: handler)
-        webView.navigationDelegate = coordinator
-        objc_setAssociatedObject(self, "coordinator", coordinator, .OBJC_ASSOCIATION_RETAIN)
-    }
-}
-
-private class QuickLookCoordinator: NSObject, WKNavigationDelegate {
-    let markdownText: String
-    let completionHandler: (Error?) -> Void
-
-    init(markdownText: String, completionHandler: @escaping (Error?) -> Void) {
-        self.markdownText = markdownText
-        self.completionHandler = completionHandler
+        return content
     }
 
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        webView.callAsyncJavaScript(
-            "await renderMarkdown(markdown)",
-            arguments: ["markdown": markdownText],
-            in: nil,
-            in: .page
-        ) { [weak self] result in
-            webView.isHidden = false
-            switch result {
-            case .success:
-                self?.completionHandler(nil)
-            case .failure(let error):
-                self?.completionHandler(error)
+    private func escapeForJSString(_ str: String) -> String {
+        var result = ""
+        result.reserveCapacity(str.count + str.count / 10)
+        for char in str {
+            switch char {
+            case "\\": result += "\\\\"
+            case "\"": result += "\\\""
+            case "\n": result += "\\n"
+            case "\r": result += "\\r"
+            case "\t": result += "\\t"
+            case "\u{2028}": result += "\\u2028"
+            case "\u{2029}": result += "\\u2029"
+            default: result.append(char)
             }
         }
-    }
-
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        completionHandler(error)
+        return result
     }
 }

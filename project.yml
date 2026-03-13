@@ -11,6 +11,9 @@ settings:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "26.0"
     ENABLE_HARDENED_RUNTIME: true
+    DEVELOPMENT_TEAM: T285KNHK2U
+    CODE_SIGN_IDENTITY: "Apple Development"
+    CODE_SIGN_STYLE: Automatic
 
 targets:
   QMark:
@@ -96,19 +99,28 @@ targets:
       properties:
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
+        com.apple.security.files.user-selected.read-only: true
+        com.apple.security.cs.disable-library-validation: true
+        com.apple.security.temporary-exception.mach-lookup.global-name:
+          - com.apple.nsurlsessiond
+        com.apple.security.temporary-exception.files.absolute-path.read-only:
+          - /
     info:
       path: QMarkQuickLook/Info.plist
       properties:
+        CFBundlePackageType: XPC!
         NSExtension:
           NSExtensionPointIdentifier: com.apple.quicklook.preview
-          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PreviewViewController
-        QLSupportedContentTypes:
-          - net.daringfireball.markdown
-          - com.qmark.mdx
-          - com.qmark.rmd
-          - com.qmark.mdown
-          - com.qmark.mkd
-        QLSupportsSearchableItems: false
+          NSExtensionPrincipalClass: QMarkQuickLook.PreviewViewController
+          NSExtensionAttributes:
+            QLSupportedContentTypes:
+              - net.daringfireball.markdown
+              - com.unknown.md
+              - com.qmark.mdx
+              - com.qmark.rmd
+              - com.qmark.mdown
+              - com.qmark.mkd
+            QLSupportsSearchableItems: false
         UTImportedTypeDeclarations:
           - UTTypeIdentifier: com.qmark.mdx
             UTTypeDescription: MDX Document
@@ -142,6 +154,4 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.qmark.app.quicklook
         PRODUCT_NAME: QMarkQuickLook
-        INFOPLIST_FILE: QMarkQuickLook/Info.plist
         CODE_SIGN_ENTITLEMENTS: QMarkQuickLook/QMarkQuickLook.entitlements
-        GENERATE_INFOPLIST_FILE: false
