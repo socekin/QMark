@@ -11,7 +11,7 @@ settings:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "26.0"
     ENABLE_HARDENED_RUNTIME: true
-    DEVELOPMENT_TEAM: T285KNHK2U  # Replace with your own Apple Developer Team ID
+    DEVELOPMENT_TEAM: ""  # Replace with your own Apple Developer Team ID
     CODE_SIGN_IDENTITY: "Apple Development"
     CODE_SIGN_STYLE: Automatic
 

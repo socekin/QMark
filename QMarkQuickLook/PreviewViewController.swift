@@ -92,7 +92,7 @@ class PreviewViewController: NSViewController, @preconcurrency QLPreviewingContr
                 var text = new TextDecoder().decode(bytes);
 
                 var md = window.markdownit({
-                    html: false,
+                    html: true,
                     linkify: true,
                     typographer: true,
                     highlight: function(str, lang) {

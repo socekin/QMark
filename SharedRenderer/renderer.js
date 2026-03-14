@@ -4,7 +4,7 @@ let md;
 
 function initRenderer() {
     md = window.markdownit({
-        html: false,
+        html: true,
         linkify: true,
         typographer: true,
         highlight: function (str, lang) {

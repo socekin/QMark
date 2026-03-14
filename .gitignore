@@ -1,6 +1,5 @@
 # Xcode
 *.xcodeproj/
-!*.xcodeproj/project.pbxproj
 xcuserdata/
 DerivedData/
 build/
