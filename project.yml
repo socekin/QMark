@@ -1,4 +1,7 @@
 name: QMark
+configFiles:
+  Release: Local.xcconfig
+  Debug: Local.xcconfig
 options:
   bundleIdPrefix: com.qmark
   deploymentTarget:
@@ -11,7 +14,7 @@ settings:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "26.0"
     ENABLE_HARDENED_RUNTIME: true
-    DEVELOPMENT_TEAM: ""  # Replace with your own Apple Developer Team ID
+    DEVELOPMENT_TEAM: ""  # Set your Team ID in Local.xcconfig
     CODE_SIGN_IDENTITY: "Apple Development"
     CODE_SIGN_STYLE: Automatic
 
@@ -39,14 +42,31 @@ targets:
       properties:
         CFBundleDocumentTypes:
           - CFBundleTypeRole: Editor
-            LSHandlerRank: Alternate
+            LSHandlerRank: Default
             LSItemContentTypes:
               - net.daringfireball.markdown
+              - com.unknown.md
               - com.qmark.mdx
               - com.qmark.rmd
               - com.qmark.mdown
               - com.qmark.mkd
         UTImportedTypeDeclarations:
+          - UTTypeIdentifier: net.daringfireball.markdown
+            UTTypeDescription: Markdown Document
+            UTTypeConformsTo:
+              - public.plain-text
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - md
+                - markdown
+          - UTTypeIdentifier: com.unknown.md
+            UTTypeDescription: Markdown Document
+            UTTypeConformsTo:
+              - public.plain-text
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - md
+                - markdown
           - UTTypeIdentifier: com.qmark.mdx
             UTTypeDescription: MDX Document
             UTTypeConformsTo:
@@ -116,13 +136,36 @@ targets:
           NSExtensionAttributes:
             QLSupportedContentTypes:
               - net.daringfireball.markdown
+              - public.markdown
               - com.unknown.md
               - com.qmark.mdx
               - com.qmark.rmd
               - com.qmark.mdown
               - com.qmark.mkd
+              - dyn.ah62d4rv4ge81e5pe
+              - dyn.ah62d4rv4ge8043a
+              - dyn.ah62d4rv4ge81c5pe
+              - dyn.ah62d4rv4ge8043d2
+              - dyn.ah62d4rv4ge8043dd
+              - dyn.ah62d4rv4ge80c6dmqk
             QLSupportsSearchableItems: false
         UTImportedTypeDeclarations:
+          - UTTypeIdentifier: net.daringfireball.markdown
+            UTTypeDescription: Markdown Document
+            UTTypeConformsTo:
+              - public.plain-text
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - md
+                - markdown
+          - UTTypeIdentifier: com.unknown.md
+            UTTypeDescription: Markdown Document
+            UTTypeConformsTo:
+              - public.plain-text
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - md
+                - markdown
           - UTTypeIdentifier: com.qmark.mdx
             UTTypeDescription: MDX Document
             UTTypeConformsTo:
