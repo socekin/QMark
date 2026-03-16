@@ -1,7 +1,7 @@
 # QMark
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-macOS%2026%2B-black.svg)](#系统要求)
+[![Platform](https://img.shields.io/badge/platform-macOS%2015%2B-black.svg)](#系统要求)
 [![Swift](https://img.shields.io/badge/Swift-6.0-F05138.svg?logo=swift&logoColor=white)](#技术栈)
 [![XcodeGen](https://img.shields.io/badge/XcodeGen-required-0A84FF.svg)](#构建)
 
@@ -24,8 +24,8 @@
 
 ## 系统要求
 
-- macOS 26.0+
-- Xcode 26.0+
+- macOS 15.0+
+- Xcode 16.0+
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 - Node.js（仅在重新构建 CodeMirror bundle 时需要）
 
@@ -51,7 +51,7 @@ make editor-libs
 bash scripts/download-libs.sh
 ```
 
-> **说明：** 构建前请先把 `project.yml` 中的 `DEVELOPMENT_TEAM` 改成你自己的 Apple Developer Team ID，或者将 `CODE_SIGN_STYLE` 改为 `Manual` 后自行配置签名。
+> **说明：** 构建前请先把 `Local.xcconfig.example` 复制为 `Local.xcconfig` 并填入你的 Apple Developer Team ID，或者将 `project.yml` 中的 `CODE_SIGN_STYLE` 改为 `Manual` 后自行配置签名。
 
 ## 架构
 

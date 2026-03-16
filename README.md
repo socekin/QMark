@@ -1,7 +1,7 @@
 # QMark
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-macOS%2026%2B-black.svg)](#requirements)
+[![Platform](https://img.shields.io/badge/platform-macOS%2015%2B-black.svg)](#requirements)
 [![Swift](https://img.shields.io/badge/Swift-6.0-F05138.svg?logo=swift&logoColor=white)](#tech-stack)
 [![XcodeGen](https://img.shields.io/badge/XcodeGen-required-0A84FF.svg)](#build)
 
@@ -24,8 +24,8 @@ A native macOS Markdown editor built with SwiftUI + WKWebView + CodeMirror 6.
 
 ## Requirements
 
-- macOS 26.0+
-- Xcode 26.0+
+- macOS 15.0+
+- Xcode 16.0+
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 - Node.js (only needed when rebuilding the CodeMirror bundle)
 
@@ -51,7 +51,7 @@ make editor-libs
 bash scripts/download-libs.sh
 ```
 
-> **Note:** Before building, update `DEVELOPMENT_TEAM` in `project.yml` to your own Apple Developer Team ID, or set `CODE_SIGN_STYLE` to `Manual` and configure signing as needed.
+> **Note:** Before building, copy `Local.xcconfig.example` to `Local.xcconfig` and set your Apple Developer Team ID, or set `CODE_SIGN_STYLE` to `Manual` in `project.yml` and configure signing as needed.
 
 ## Architecture
 
