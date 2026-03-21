@@ -69,6 +69,21 @@ struct PreviewView: NSViewRepresentable {
         var lastIsDark: Bool?
         var lastScrollPercentage: CGFloat = 0
 
+        func webView(_ webView: WKWebView,
+                     decidePolicyFor navigationAction: WKNavigationAction,
+                     decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            // Allow initial template load and internal about: navigations
+            if navigationAction.navigationType == .other {
+                decisionHandler(.allow)
+                return
+            }
+            // Open all user-triggered navigations in system browser
+            if let url = navigationAction.request.url {
+                NSWorkspace.shared.open(url)
+            }
+            decisionHandler(.cancel)
+        }
+
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             isPageLoaded = true
             if let markdown = pendingMarkdown {
