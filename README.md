@@ -2,133 +2,215 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%2015%2B-black.svg)](#requirements)
-[![Swift](https://img.shields.io/badge/Swift%20tools-6.2%2B-F05138.svg?logo=swift&logoColor=white)](#tech-stack)
-[![XcodeGen](https://img.shields.io/badge/XcodeGen-required-0A84FF.svg)](#build)
+[![Swift](https://img.shields.io/badge/Swift%20tools-6.2%2B-F05138.svg?logo=swift&logoColor=white)](#requirements)
+[![XcodeGen](https://img.shields.io/badge/XcodeGen-required-0A84FF.svg)](#build-from-source)
 
-A native macOS Markdown editor built with SwiftUI, MarkdownView, WKWebView, and CodeMirror 6.
+QMark is a native macOS Markdown editor with a CodeMirror editing surface, a SwiftUI MarkdownView preview, and a bundled Quick Look extension for Finder previews.
 
 [English](README.md) | [Simplified Chinese](README.zh-CN.md) | [Changelog](CHANGELOG.md)
 
+## Current Direction
+
+QMark is moving its Markdown preview layer from the legacy HTML renderer to a native SwiftUI renderer powered by [MarkdownView](https://github.com/LiYanan2004/MarkdownView). The main editor preview and the Quick Look extension now share the same preview component so their Markdown behavior stays aligned.
+
+The editor remains web-based through WKWebView and CodeMirror 6 because that path gives QMark a strong text editing surface, keyboard behavior, and Markdown authoring workflow. The preview side is native SwiftUI.
+
 ## Features
 
-- **Split View** — CodeMirror 6 editor on the left, native MarkdownView preview on the right
-- **Syntax Highlighting** — CodeMirror editor highlighting and native highlighted code blocks in preview
-- **Theme Switching** — Follow system, Light, or Dark mode with instant switching
-- **Native Preview** — SwiftUI Markdown rendering shared by the main app and Quick Look extension
-- **Keyboard Shortcuts** — `⌘B` bold, `⌘I` italic, `⌘K` insert link, `⌘F` find/replace
-- **Resizable Split** — Drag the divider to adjust editor/preview ratio
-- **Toggle Editor** — Collapse the editor for a distraction-free reading mode
-- **QuickLook Extension** — Preview Markdown files in Finder with spacebar
-- **Rich Content** — Code highlighting, math, task lists, tables, and common Markdown elements
-- **Mermaid Deferred** — Mermaid fenced blocks are shown as code blocks in this migration phase
-- **Multi-format** — `.md` / `.mdx` / `.rmd` / `.mdown` / `.mkd`
+- Split editor and preview layout for writing and reading side by side.
+- CodeMirror 6 editor with Markdown syntax highlighting.
+- Shared MarkdownView preview in the main app and Quick Look extension.
+- Finder Quick Look support for Markdown files.
+- macOS-native document handling through `ReferenceFileDocument`.
+- Light, dark, and system appearance modes.
+- Keyboard shortcuts for common Markdown editing actions.
+- Resizable editor and preview panes.
+- Editor-only and preview-oriented reading workflows.
+- Markdown support for headings, lists, tables, task lists, code blocks, math, links, and common GitHub-flavored Markdown content.
+- Supported file extensions: `.md`, `.markdown`, `.mdx`, `.rmd`, `.mdown`, and `.mkd`.
+
+## Preview Behavior
+
+The current preview implementation lives in `QMarkShared/Preview/QMarkMarkdownPreview.swift`.
+
+```text
+QMark/Preview/PreviewView.swift
+        │
+        ▼
+QMarkShared/Preview/QMarkMarkdownPreview.swift
+        ▲
+        │
+QMarkQuickLook/PreviewViewController.swift
+```
+
+This keeps the app preview and Finder Quick Look preview on the same Markdown rendering path.
+
+MarkdownView is pinned in `project.yml` to:
+
+```text
+82cf1bba9d2c5fdf52d895506e4142fcbbcfe157
+```
+
+Mermaid rendering is intentionally deferred in this migration phase. Mermaid fenced blocks are rendered as code blocks until a native or isolated diagram rendering strategy is added later.
+
+## Quick Look
+
+QMark includes a Quick Look preview extension at `QMarkQuickLook/`. After installing or replacing a local build, refresh Quick Look registration:
+
+```bash
+qlmanage -r
+qlmanage -r cache
+```
+
+If Finder still shows stale behavior, relaunch Finder:
+
+```bash
+killall Finder
+```
+
+For local debugging, verify the extension is registered from the expected app bundle:
+
+```bash
+pluginkit -m -A -D -vv | grep -A 8 -B 2 "com.qmark.app.quicklook"
+```
 
 ## Requirements
 
 - macOS 15.0+
 - Xcode 26.0+ with Swift tools 6.2+
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen)
-- Node.js (only needed when rebuilding the CodeMirror bundle)
+- Apple Development signing identity for local app and extension builds
+- Node.js only when rebuilding the CodeMirror bundle
 
-## Build
+## Build From Source
+
+Install XcodeGen if needed:
 
 ```bash
-# Install XcodeGen (if not already installed)
 brew install xcodegen
+```
 
-# Generate Xcode project and build
+Create local signing configuration:
+
+```bash
+cp Local.xcconfig.example Local.xcconfig
+```
+
+Edit `Local.xcconfig` and set your Apple Developer Team ID.
+
+Generate the Xcode project and build:
+
+```bash
 make build
+```
 
-# Build and launch
+Launch the Debug build:
+
+```bash
 make run
+```
 
-# Clean build artifacts
+Clean generated build output:
+
+```bash
 make clean
+```
 
-# Rebuild CodeMirror bundle (requires Node.js)
+Rebuild the CodeMirror bundle:
+
+```bash
 make editor-libs
+```
 
-# Re-download legacy web preview libraries kept for rollback
+Re-download legacy web preview libraries kept for rollback:
+
+```bash
 bash scripts/download-libs.sh
 ```
 
-> **Note:** Before building, copy `Local.xcconfig.example` to `Local.xcconfig` and set your Apple Developer Team ID, or set `CODE_SIGN_STYLE` to `Manual` in `project.yml` and configure signing as needed.
-
 ## Verification
 
+There is no dedicated XCTest target yet. Use the Debug build plus manual smoke testing.
+
+Recommended local verification:
+
 ```bash
-# Generate the project and verify the main app plus Quick Look extension build
 make build
-
-# Refresh Quick Look after installing a local build
-qlmanage -r
-qlmanage -r cache
+codesign --verify --deep --strict --verbose=2 build/Build/Products/Debug/QMark.app
 ```
 
-There is no dedicated XCTest target at the moment. Use the Debug build plus manual smoke tests for the editor, native preview, and Finder Quick Look preview.
+Manual smoke test checklist:
 
-## Architecture
+- Open a Markdown file in QMark.
+- Edit Markdown in the CodeMirror editor.
+- Confirm the native preview updates.
+- Toggle light, dark, and system appearance modes.
+- Preview the same Markdown file in Finder with Quick Look.
+- Confirm Mermaid fenced blocks remain visible as code blocks.
 
-```
-QMark/                       — Main app (SwiftUI)
-├── QMarkApp.swift            — App entry, menu configuration
-├── ContentView.swift         — Split view layout, toolbar, theme management
-├── CleanWebView.swift        — WKWebView subclass used by the editor
-├── MarkdownDocument.swift    — ReferenceFileDocument model
+## Project Layout
+
+```text
+QMark/
+├── QMarkApp.swift
+├── ContentView.swift
+├── MarkdownDocument.swift
+├── CleanWebView.swift
 ├── Editor/
-│   └── EditorView.swift      — NSViewRepresentable wrapping CodeMirror 6
+│   └── EditorView.swift
 └── Preview/
-    ├── PreviewView.swift     — SwiftUI wrapper around the shared native preview
-    └── PreviewBridge.swift   — Legacy rollback bridge for the old web preview
+    ├── PreviewView.swift
+    └── PreviewBridge.swift
 
 QMarkShared/
 └── Preview/
-    └── QMarkMarkdownPreview.swift — Shared SwiftUI MarkdownView renderer
+    └── QMarkMarkdownPreview.swift
 
-EditorRenderer/              — Editor web resources
-├── editor.html              — HTML shell for CodeMirror
-├── editor.js                — CodeMirror setup, themes, keyboard shortcuts, Swift bridge
-├── editor.css               — Typography
+QMarkQuickLook/
+├── PreviewViewController.swift
+├── Info.plist
+└── QMarkQuickLook.entitlements
+
+EditorRenderer/
+├── editor.html
+├── editor.js
+├── editor.css
 └── libs/
-    └── codemirror.min.js    — CodeMirror 6 bundle (built via esbuild)
+    └── codemirror.min.js
 
-SharedRenderer/              — Legacy preview web resources kept for rollback
-├── template.html            — Legacy preview HTML template
-├── renderer.js              — Legacy markdown-it initialization with plugins
-├── style.css                — Legacy GitHub-style preview CSS
-└── libs/                    — Legacy markdown-it, KaTeX, highlight.js, Mermaid, etc.
+SharedRenderer/
+├── template.html
+├── renderer.js
+├── style.css
+└── libs/
 
-QMarkQuickLook/              — QuickLook preview extension
-scripts/                     — Build scripts for JS dependencies
+scripts/
+docs/
 ```
 
-## Tech Stack
+## Architecture Notes
 
-| Component | Technology |
-|-----------|-----------|
-| Editor | WKWebView + [CodeMirror 6](https://codemirror.net/) |
-| Preview | SwiftUI + [MarkdownView](https://github.com/LiYanan2004/MarkdownView) |
+| Area | Implementation |
+|------|----------------|
+| App UI | SwiftUI |
+| Document model | `ReferenceFileDocument` |
+| Editor | WKWebView + CodeMirror 6 |
+| Main preview | SwiftUI + MarkdownView |
+| Quick Look preview | App extension + shared MarkdownView preview |
+| Code highlighting | MarkdownView + Highlightr |
 | Math | MarkdownView math rendering |
-| Diagrams | Mermaid deferred; fenced blocks render as code |
-| Code Highlighting | MarkdownView + Highlightr |
-| Document Model | ReferenceFileDocument |
-| UI Framework | SwiftUI |
-| Project Generation | [XcodeGen](https://github.com/yonaskolb/XcodeGen) |
-| JS Bundling | [esbuild](https://esbuild.github.io/) for the editor bundle |
+| Project generation | XcodeGen |
+| Editor bundle | esbuild |
 
-## Preview Status
-
-- MarkdownView is pinned in `project.yml` to commit `82cf1bba9d2c5fdf52d895506e4142fcbbcfe157`.
-- The main app preview and Quick Look extension share `QMarkMarkdownPreview`, so Markdown rendering behavior stays aligned.
-- The legacy web preview renderer remains in the repository as a rollback path while the MarkdownView migration is evaluated.
+`SharedRenderer/` remains in the repository as a rollback path for the previous HTML preview implementation. New preview work should start from `QMarkShared/Preview/QMarkMarkdownPreview.swift`.
 
 ## Current Limitations
 
-- Exact editor-to-preview scroll synchronization is not implemented for the native preview yet.
-- Mermaid diagrams are not rendered in this phase; Mermaid fences remain visible as code blocks.
-- The legacy `SharedRenderer` assets remain in the repository only as a rollback path while the native preview is evaluated.
+- Mermaid diagrams are not rendered yet.
+- Exact editor-to-preview scroll synchronization is not implemented for the native preview.
+- The Chinese README is not maintained as the source of truth on this branch.
+- The legacy HTML preview assets are kept only for rollback while the native preview migration is evaluated.
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0 only.
-See [LICENSE](LICENSE) for details.
+QMark is licensed under the GNU General Public License v3.0 only. See [LICENSE](LICENSE) for details.
