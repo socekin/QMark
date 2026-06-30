@@ -34,7 +34,7 @@ struct ContentView: View {
     @ObservedObject var document: MarkdownDocument
     @State private var markdownText: String = ""
     @State private var scrollPercentage: CGFloat = 0
-    @State private var isEditorVisible: Bool = true
+    @State private var isEditorVisible: Bool = false
     @State private var editorWidthRatio: CGFloat = 0.5
     @State private var isDarkMode: Bool = false
     @AppStorage("appTheme") private var appTheme: String = AppTheme.system.rawValue
