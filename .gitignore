@@ -3,6 +3,7 @@
 xcuserdata/
 DerivedData/
 build/
+build-signed/
 *.xcworkspace
 
 # macOS
