@@ -26,6 +26,7 @@ All notable changes to this project will be documented in this file.
 - Avoided repeated Quick Look Markdown decoding after the preview source is installed.
 - Restored bidirectional percentage-based scroll synchronization between the editor and preview.
 - Restored the filled macOS app icon appearance in generated builds.
+- Disabled stale document restoration after normal close or quit while preserving system-initiated restore support.
 
 ### Deferred
 

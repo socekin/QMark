@@ -5,10 +5,19 @@ import AppKit
 struct QMarkApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
+    private let launchSceneRestorationBehavior: SceneRestorationBehavior
+
+    init() {
+        let allowsNativeRestoration = QMarkWindowRestorationPolicy.shouldEnableNativeSceneRestorationOnLaunch()
+        launchSceneRestorationBehavior = allowsNativeRestoration ? .automatic : .disabled
+        QMarkWindowRestorationPolicy.setApplePersistenceStateIgnored(!allowsNativeRestoration)
+    }
+
     var body: some Scene {
         DocumentGroup(newDocument: { MarkdownDocument() }) { file in
             ContentView(document: file.document)
         }
+        .restorationBehavior(launchSceneRestorationBehavior)
         .windowStyle(.automatic)
         .windowToolbarStyle(.unified)
         .commands {
@@ -18,17 +27,17 @@ struct QMarkApp: App {
                     AboutWindow.show()
                 }
             }
-            // 移除 Help 菜单
+            // Remove the Help menu.
             CommandGroup(replacing: .help) {}
-            // 移除 View > Toolbar 相关
+            // Remove View > Toolbar commands.
             CommandGroup(replacing: .toolbar) {}
-            // 移除 View > Sidebar
+            // Remove View > Sidebar commands.
             CommandGroup(replacing: .sidebar) {}
-            // 移除 Edit > Spelling/Grammar、Substitutions、Transformations、Speech
+            // Remove Edit > Spelling and text transformation commands.
             CommandGroup(replacing: .textEditing) {}
-            // 移除 File > Print
+            // Remove File > Print.
             CommandGroup(replacing: .printItem) {}
-            // 移除 File > Import/Export
+            // Remove File > Import/Export.
             CommandGroup(replacing: .importExport) {}
         }
     }
@@ -93,11 +102,82 @@ struct AboutView: View {
     }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var isSystemTerminationPending = false
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // 直接从主菜单栏移除 Format 菜单（SwiftUI 的 CommandGroup 无法彻底移除）
+        installWindowRestorationPolicy()
+        QMarkWindowRestorationPolicy.setNativeSceneRestorationEnabledForNextLaunch(false)
+        QMarkWindowRestorationPolicy.setApplePersistenceStateIgnored(true)
+
+        // Remove the Format menu from the main menu because CommandGroup cannot remove it completely.
         DispatchQueue.main.async {
             NSApp.mainMenu?.items.removeAll { $0.title == "Format" }
         }
     }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        let source = currentTerminationSource
+        let isSystemTermination = source == .systemInitiated
+        QMarkWindowRestorationPolicy.setNativeSceneRestorationEnabledForNextLaunch(isSystemTermination)
+        QMarkWindowRestorationPolicy.setApplePersistenceStateIgnored(!isSystemTermination)
+        applyRestorationPolicyToOpenWindows(for: source)
+        return .terminateNow
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    private var currentTerminationSource: QMarkTerminationSource {
+        isSystemTerminationPending ? .systemInitiated : .userInitiated
+    }
+
+    private func installWindowRestorationPolicy() {
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(workspaceWillPowerOff(_:)),
+            name: NSWorkspace.willPowerOffNotification,
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowWillClose(_:)),
+            name: NSWindow.willCloseNotification,
+            object: nil
+        )
+    }
+
+    @objc private func workspaceWillPowerOff(_ notification: Notification) {
+        isSystemTerminationPending = true
+        QMarkWindowRestorationPolicy.setNativeSceneRestorationEnabledForNextLaunch(true)
+        QMarkWindowRestorationPolicy.setApplePersistenceStateIgnored(false)
+    }
+
+    @objc private func windowWillClose(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow else { return }
+        let isSystemTermination = currentTerminationSource == .systemInitiated
+        QMarkWindowRestorationPolicy.setNativeSceneRestorationEnabledForNextLaunch(isSystemTermination)
+        QMarkWindowRestorationPolicy.setApplePersistenceStateIgnored(!isSystemTermination)
+        applyRestorationPolicy(to: window, for: currentTerminationSource)
+    }
+
+    private func applyRestorationPolicyToOpenWindows(for source: QMarkTerminationSource) {
+        NSApp.windows.forEach { applyRestorationPolicy(to: $0, for: source) }
+    }
+
+    private func applyRestorationPolicy(to window: NSWindow, for source: QMarkTerminationSource) {
+        let shouldKeepRestorable = QMarkWindowRestorationPolicy.shouldKeepDocumentWindowsRestorable(for: source)
+        window.isRestorable = shouldKeepRestorable
+
+        if shouldKeepRestorable {
+            window.enableSnapshotRestoration()
+        } else {
+            window.disableSnapshotRestoration()
+        }
+    }
+
 }
