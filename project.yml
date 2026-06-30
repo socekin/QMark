@@ -116,19 +116,6 @@ targets:
       - target: QMarkQuickLook
       - package: MarkdownView
         product: MarkdownView
-    postBuildScripts:
-      - path: scripts/generate_app_icon_icns.sh
-        name: Generate Complete App Icon
-        inputFiles:
-          - "$(SRCROOT)/QMark/Assets.xcassets/AppIcon.appiconset/icon_16x16.png"
-          - "$(SRCROOT)/QMark/Assets.xcassets/AppIcon.appiconset/icon_32x32.png"
-          - "$(SRCROOT)/QMark/Assets.xcassets/AppIcon.appiconset/icon_64x64.png"
-          - "$(SRCROOT)/QMark/Assets.xcassets/AppIcon.appiconset/icon_128x128.png"
-          - "$(SRCROOT)/QMark/Assets.xcassets/AppIcon.appiconset/icon_256x256.png"
-          - "$(SRCROOT)/QMark/Assets.xcassets/AppIcon.appiconset/icon_512x512.png"
-          - "$(SRCROOT)/QMark/Assets.xcassets/AppIcon.appiconset/icon_1024x1024.png"
-        outputFiles:
-          - "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/AppIcon.icns"
 
   QMarkQuickLook:
     type: app-extension
