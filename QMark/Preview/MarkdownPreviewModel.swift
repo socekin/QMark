@@ -9,6 +9,11 @@ final class MarkdownPreviewModel: ObservableObject {
     private var pendingTaskID: UUID?
     private var streamingTask: Task<Void, Never>?
 
+    deinit {
+        pendingTask?.cancel()
+        streamingTask?.cancel()
+    }
+
     func load(_ text: String) {
         pendingTask?.cancel()
         pendingTask = nil
