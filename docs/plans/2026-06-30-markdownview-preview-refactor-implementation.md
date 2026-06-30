@@ -8,6 +8,8 @@
 
 **Tech Stack:** SwiftUI, AppKit, QuickLookUI, XcodeGen, Swift Package Manager, MarkdownView pinned to revision `82cf1bba9d2c5fdf52d895506e4142fcbbcfe157`.
 
+**Toolchain:** Xcode 26.0+ / Swift tools 6.2+ is required because the pinned MarkdownView package declares `swift-tools-version: 6.2`.
+
 ---
 
 ## Task 1: Add the MarkdownView Package Dependency

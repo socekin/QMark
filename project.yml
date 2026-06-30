@@ -6,7 +6,7 @@ options:
   bundleIdPrefix: com.qmark
   deploymentTarget:
     macOS: "15.0"
-  xcodeVersion: "16.0"
+  xcodeVersion: "26.0"
   generateEmptyDirectories: true
 
 packages:

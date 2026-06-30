@@ -61,6 +61,7 @@ Add a Swift Package dependency to `project.yml`:
 - Package URL: `https://github.com/LiYanan2004/MarkdownView.git`
 - Requirement: exact revision `82cf1bba9d2c5fdf52d895506e4142fcbbcfe157`
 - Product: `MarkdownView`
+- Toolchain requirement: Xcode 26.0+ / Swift tools 6.2+, because the pinned MarkdownView package declares `swift-tools-version: 6.2`.
 
 Attach the package product to both targets:
 

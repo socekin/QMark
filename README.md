@@ -2,30 +2,31 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%2015%2B-black.svg)](#requirements)
-[![Swift](https://img.shields.io/badge/Swift-6.0-F05138.svg?logo=swift&logoColor=white)](#tech-stack)
+[![Swift](https://img.shields.io/badge/Swift%20tools-6.2%2B-F05138.svg?logo=swift&logoColor=white)](#tech-stack)
 [![XcodeGen](https://img.shields.io/badge/XcodeGen-required-0A84FF.svg)](#build)
 
-A native macOS Markdown editor built with SwiftUI + WKWebView + CodeMirror 6.
+A native macOS Markdown editor built with SwiftUI, MarkdownView, WKWebView, and CodeMirror 6.
 
 [English](README.md) | [Simplified Chinese](README.zh-CN.md)
 
 ## Features
 
-- **Split View** — CodeMirror 6 editor on the left, real-time markdown-it preview on the right
-- **Syntax Highlighting** — GitHub-style light/dark themes for both editor and preview
+- **Split View** — CodeMirror 6 editor on the left, native MarkdownView preview on the right
+- **Syntax Highlighting** — CodeMirror editor highlighting and native highlighted code blocks in preview
 - **Theme Switching** — Follow system, Light, or Dark mode with instant switching
-- **Scroll Sync** — Editor and preview scroll positions stay in sync
+- **Native Preview** — SwiftUI Markdown rendering shared by the main app and Quick Look extension
 - **Keyboard Shortcuts** — `⌘B` bold, `⌘I` italic, `⌘K` insert link, `⌘F` find/replace
 - **Resizable Split** — Drag the divider to adjust editor/preview ratio
 - **Toggle Editor** — Collapse the editor for a distraction-free reading mode
 - **QuickLook Extension** — Preview Markdown files in Finder with spacebar
-- **Rich Content** — Code highlighting, KaTeX math, Mermaid diagrams, task lists, footnotes, and more
+- **Rich Content** — Code highlighting, math, task lists, tables, and common Markdown elements
+- **Mermaid Deferred** — Mermaid fenced blocks are shown as code blocks in this migration phase
 - **Multi-format** — `.md` / `.mdx` / `.rmd` / `.mdown` / `.mkd`
 
 ## Requirements
 
 - macOS 15.0+
-- Xcode 16.0+
+- Xcode 26.0+ with Swift tools 6.2+
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 - Node.js (only needed when rebuilding the CodeMirror bundle)
 
@@ -47,7 +48,7 @@ make clean
 # Rebuild CodeMirror bundle (requires Node.js)
 make editor-libs
 
-# Re-download markdown-it and other preview libraries
+# Re-download legacy web preview libraries kept for rollback
 bash scripts/download-libs.sh
 ```
 
@@ -56,16 +57,20 @@ bash scripts/download-libs.sh
 ## Architecture
 
 ```
-QMark/                      — Main app (SwiftUI)
-├── QMarkApp.swift           — App entry, menu configuration
-├── ContentView.swift        — Split view layout, toolbar, theme management
-├── CleanWebView.swift       — WKWebView subclass with clean context menus
-├── MarkdownDocument.swift   — ReferenceFileDocument model
+QMark/                       — Main app (SwiftUI)
+├── QMarkApp.swift            — App entry, menu configuration
+├── ContentView.swift         — Split view layout, toolbar, theme management
+├── CleanWebView.swift        — WKWebView subclass used by the editor
+├── MarkdownDocument.swift    — ReferenceFileDocument model
 ├── Editor/
-│   └── EditorView.swift     — NSViewRepresentable wrapping CodeMirror 6
+│   └── EditorView.swift      — NSViewRepresentable wrapping CodeMirror 6
 └── Preview/
-    ├── PreviewView.swift    — NSViewRepresentable wrapping markdown-it
-    └── PreviewBridge.swift  — Swift ↔ JavaScript bridge for preview
+    ├── PreviewView.swift     — SwiftUI wrapper around the shared native preview
+    └── PreviewBridge.swift   — Legacy rollback bridge for the old web preview
+
+QMarkShared/
+└── Preview/
+    └── QMarkMarkdownPreview.swift — Shared SwiftUI MarkdownView renderer
 
 EditorRenderer/              — Editor web resources
 ├── editor.html              — HTML shell for CodeMirror
@@ -74,11 +79,11 @@ EditorRenderer/              — Editor web resources
 └── libs/
     └── codemirror.min.js    — CodeMirror 6 bundle (built via esbuild)
 
-SharedRenderer/              — Preview web resources
-├── template.html            — Preview HTML template
-├── renderer.js              — markdown-it initialization with plugins
-├── style.css                — GitHub-style preview CSS (light/dark)
-└── libs/                    — markdown-it, KaTeX, highlight.js, Mermaid, etc.
+SharedRenderer/              — Legacy preview web resources kept for rollback
+├── template.html            — Legacy preview HTML template
+├── renderer.js              — Legacy markdown-it initialization with plugins
+├── style.css                — Legacy GitHub-style preview CSS
+└── libs/                    — Legacy markdown-it, KaTeX, highlight.js, Mermaid, etc.
 
 QMarkQuickLook/              — QuickLook preview extension
 scripts/                     — Build scripts for JS dependencies
@@ -89,14 +94,20 @@ scripts/                     — Build scripts for JS dependencies
 | Component | Technology |
 |-----------|-----------|
 | Editor | WKWebView + [CodeMirror 6](https://codemirror.net/) |
-| Preview | WKWebView + [markdown-it](https://github.com/markdown-it/markdown-it) |
-| Math | [KaTeX](https://katex.org/) |
-| Diagrams | [Mermaid](https://mermaid.js.org/) |
-| Code Highlighting | [highlight.js](https://highlightjs.org/) |
+| Preview | SwiftUI + [MarkdownView](https://github.com/LiYanan2004/MarkdownView) |
+| Math | MarkdownView math rendering |
+| Diagrams | Mermaid deferred; fenced blocks render as code |
+| Code Highlighting | MarkdownView + Highlightr |
 | Document Model | ReferenceFileDocument |
 | UI Framework | SwiftUI |
 | Project Generation | [XcodeGen](https://github.com/yonaskolb/XcodeGen) |
-| JS Bundling | [esbuild](https://esbuild.github.io/) |
+| JS Bundling | [esbuild](https://esbuild.github.io/) for the editor bundle |
+
+## Current Limitations
+
+- Exact editor-to-preview scroll synchronization is not implemented for the native preview yet.
+- Mermaid diagrams are not rendered in this phase; Mermaid fences remain visible as code blocks.
+- The legacy `SharedRenderer` assets remain in the repository only as a rollback path while the native preview is evaluated.
 
 ## License
 
