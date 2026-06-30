@@ -32,6 +32,7 @@ enum AppTheme: String, CaseIterable {
 
 struct ContentView: View {
     @ObservedObject var document: MarkdownDocument
+    @StateObject private var previewModel = MarkdownPreviewModel()
     @State private var markdownText: String = ""
     @State private var scrollPercentage: CGFloat = 0
     @State private var isEditorVisible: Bool = false
@@ -53,6 +54,7 @@ struct ContentView: View {
                         isDark: isDarkMode,
                         onTextChange: { text in
                             markdownText = text
+                            previewModel.scheduleUpdate(text)
                         },
                         onScrollChange: { percentage in
                             scrollPercentage = percentage
@@ -86,7 +88,7 @@ struct ContentView: View {
 
                 // 右侧：预览
                 PreviewView(
-                    markdown: markdownText,
+                    markdown: previewModel.markdown,
                     scrollPercentage: scrollPercentage,
                     isDark: isDarkMode
                 )
@@ -95,6 +97,7 @@ struct ContentView: View {
         }
         .onAppear {
             markdownText = document.text
+            previewModel.load(document.text)
             applyTheme(selectedTheme)
         }
         .onChange(of: appTheme) {
