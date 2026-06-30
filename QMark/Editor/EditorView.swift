@@ -1,13 +1,31 @@
+import OSLog
 import SwiftUI
 import WebKit
 
 struct EditorView: NSViewRepresentable {
     @ObservedObject var document: MarkdownDocument
     var isDark: Bool = false
+    var scrollPercentage: CGFloat = 0
     var onTextChange: ((String) -> Void)?
     var onScrollChange: ((CGFloat) -> Void)?
 
     func makeNSView(context: Context) -> CleanWebView {
+        let signpostID = OSSignpostID(log: QMarkPerformanceLog.pointsOfInterest)
+        os_signpost(
+            .begin,
+            log: QMarkPerformanceLog.pointsOfInterest,
+            name: "EditorView.makeNSView",
+            signpostID: signpostID
+        )
+        defer {
+            os_signpost(
+                .end,
+                log: QMarkPerformanceLog.pointsOfInterest,
+                name: "EditorView.makeNSView",
+                signpostID: signpostID
+            )
+        }
+
         let config = WKWebViewConfiguration()
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
 
@@ -39,6 +57,7 @@ struct EditorView: NSViewRepresentable {
     func updateNSView(_ webView: CleanWebView, context: Context) {
         context.coordinator.syncIfNeeded(document.text)
         context.coordinator.refreshThemeIfNeeded(isDark, webView: webView)
+        context.coordinator.syncScrollIfNeeded(scrollPercentage)
     }
 
     static func dismantleNSView(_ webView: CleanWebView, coordinator: Coordinator) {
@@ -61,6 +80,10 @@ struct EditorView: NSViewRepresentable {
         private var lastSentContent: String?
         private var isSyncingFromJS = false
         private var lastIsDark: Bool?
+        private var lastAppliedScrollPercentage: CGFloat?
+        private var lastRequestedScrollPercentage: CGFloat?
+        private var pendingScrollPercentage: CGFloat?
+        private let scrollTolerance: CGFloat = 0.0001
 
         init(_ parent: EditorView) {
             self.parent = parent
@@ -123,6 +146,10 @@ struct EditorView: NSViewRepresentable {
                 let content = pendingContent ?? parent.document.text
                 pendingContent = nil
                 sendContent(content)
+                if let pendingScrollPercentage {
+                    self.pendingScrollPercentage = nil
+                    syncScrollIfNeeded(pendingScrollPercentage)
+                }
 
             case "contentChanged":
                 guard let text = message.body as? String else { return }
@@ -134,12 +161,72 @@ struct EditorView: NSViewRepresentable {
 
             case "scrollChanged":
                 if let percentage = message.body as? Double {
-                    parent.onScrollChange?(CGFloat(percentage))
+                    let clampedPercentage = Self.clampedPercentage(CGFloat(percentage))
+                    lastAppliedScrollPercentage = clampedPercentage
+                    lastRequestedScrollPercentage = clampedPercentage
+                    parent.onScrollChange?(clampedPercentage)
                 }
 
             default:
                 break
             }
+        }
+
+        func syncScrollIfNeeded(_ percentage: CGFloat) {
+            let clampedPercentage = Self.clampedPercentage(percentage)
+            guard isEditorReady, let webView else {
+                pendingScrollPercentage = clampedPercentage
+                return
+            }
+
+            if let lastAppliedScrollPercentage,
+               abs(lastAppliedScrollPercentage - clampedPercentage) <= scrollTolerance {
+                return
+            }
+            if let lastRequestedScrollPercentage,
+               abs(lastRequestedScrollPercentage - clampedPercentage) <= scrollTolerance {
+                return
+            }
+
+            lastRequestedScrollPercentage = clampedPercentage
+            webView.callAsyncJavaScript(
+                "setScrollPercentage(percentage)",
+                arguments: ["percentage": Double(clampedPercentage)],
+                in: nil,
+                in: .page,
+                completionHandler: { [weak self] result in
+                    Task { @MainActor in
+                        guard let self else { return }
+
+                        if let lastRequestedScrollPercentage = self.lastRequestedScrollPercentage,
+                           abs(lastRequestedScrollPercentage - clampedPercentage) <= self.scrollTolerance {
+                            self.lastRequestedScrollPercentage = nil
+                        }
+
+                        guard case .success(let value) = result,
+                              Self.booleanResult(from: value)
+                        else {
+                            return
+                        }
+
+                        self.lastAppliedScrollPercentage = clampedPercentage
+                    }
+                }
+            )
+        }
+
+        private static func clampedPercentage(_ percentage: CGFloat) -> CGFloat {
+            max(0, min(1, percentage))
+        }
+
+        private static func booleanResult(from value: Any?) -> Bool {
+            if let value = value as? Bool {
+                return value
+            }
+            if let value = value as? NSNumber {
+                return value.boolValue
+            }
+            return false
         }
     }
 }

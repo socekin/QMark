@@ -5,27 +5,28 @@
 [![Swift](https://img.shields.io/badge/Swift%20tools-6.2%2B-F05138.svg?logo=swift&logoColor=white)](#requirements)
 [![XcodeGen](https://img.shields.io/badge/XcodeGen-required-0A84FF.svg)](#build-from-source)
 
-QMark is a native macOS Markdown editor with a CodeMirror editing surface, a SwiftUI MarkdownView preview, and a bundled Quick Look extension for Finder previews.
+QMark is a native macOS Markdown reader and editor with a preview-first SwiftUI MarkdownView renderer, an on-demand CodeMirror editing surface, and a bundled Quick Look extension for Finder previews.
 
 [English](README.md) | [Simplified Chinese](README.zh-CN.md) | [Changelog](CHANGELOG.md)
 
 ## Current Direction
 
-QMark is moving its Markdown preview layer from the legacy HTML renderer to a native SwiftUI renderer powered by [MarkdownView](https://github.com/LiYanan2004/MarkdownView). The main editor preview and the Quick Look extension now share the same preview component so their Markdown behavior stays aligned.
+QMark renders Markdown through a native SwiftUI preview powered by [MarkdownView](https://github.com/LiYanan2004/MarkdownView). The main app preview and the Quick Look extension share the same preview component so their Markdown behavior stays aligned.
 
-The editor remains web-based through WKWebView and CodeMirror 6 because that path gives QMark a strong text editing surface, keyboard behavior, and Markdown authoring workflow. The preview side is native SwiftUI.
+The editor remains web-based through WKWebView and CodeMirror 6 because that path gives QMark a strong text editing surface, keyboard behavior, and Markdown authoring workflow. The editor is created only when editing is enabled; normal document opening starts in preview mode.
 
 ## Features
 
-- Split editor and preview layout for writing and reading side by side.
-- CodeMirror 6 editor with Markdown syntax highlighting.
+- Preview-first document opening with the editor hidden by default.
+- Lazy-loaded CodeMirror 6 editor with Markdown syntax highlighting.
 - Shared MarkdownView preview in the main app and Quick Look extension.
+- Streaming MarkdownView updates for app previews and Quick Look previews.
+- Percentage-based bidirectional scroll synchronization between the editor and preview.
 - Finder Quick Look support for Markdown files.
 - macOS-native document handling through `ReferenceFileDocument`.
 - Light, dark, and system appearance modes.
 - Keyboard shortcuts for common Markdown editing actions.
-- Resizable editor and preview panes.
-- Editor-only and preview-oriented reading workflows.
+- Resizable editor and preview panes when editing is enabled.
 - Markdown support for headings, lists, tables, task lists, code blocks, math, links, and common GitHub-flavored Markdown content.
 - Supported file extensions: `.md`, `.markdown`, `.mdx`, `.rmd`, `.mdown`, and `.mkd`.
 
@@ -43,7 +44,9 @@ QMarkShared/Preview/QMarkMarkdownPreview.swift
 QMarkQuickLook/PreviewViewController.swift
 ```
 
-This keeps the app preview and Finder Quick Look preview on the same Markdown rendering path.
+This keeps the app preview and Finder Quick Look preview on the same Markdown rendering path. The main app streams Markdown into the preview model and debounces editor-originated preview updates so typing and scrolling stay responsive on larger documents.
+
+The main app enables percentage-based scroll synchronization between the editor and preview. Quick Look uses the same Markdown renderer with scroll synchronization disabled, which keeps Finder previews isolated from app-only editing state.
 
 MarkdownView is pinned in `project.yml` to:
 
@@ -132,6 +135,14 @@ bash scripts/download-libs.sh
 
 There is no dedicated XCTest target yet. Use the Debug build plus manual smoke testing.
 
+Generate local performance fixtures:
+
+```bash
+scripts/generate-markdown-fixtures.sh
+```
+
+Use the generated files in `tmp/perf/` for app and Quick Look smoke testing.
+
 Recommended local verification:
 
 ```bash
@@ -142,8 +153,11 @@ codesign --verify --deep --strict --verbose=2 build/Build/Products/Debug/QMark.a
 Manual smoke test checklist:
 
 - Open a Markdown file in QMark.
+- Confirm the file opens in preview mode without showing the editor pane.
+- Use the toolbar sidebar button to show the editor.
 - Edit Markdown in the CodeMirror editor.
 - Confirm the native preview updates.
+- Scroll the editor and preview panes and confirm both directions stay synchronized.
 - Toggle light, dark, and system appearance modes.
 - Preview the same Markdown file in Finder with Quick Look.
 - Confirm Mermaid fenced blocks remain visible as code blocks.
@@ -207,7 +221,7 @@ docs/
 ## Current Limitations
 
 - Mermaid diagrams are not rendered yet.
-- Exact editor-to-preview scroll synchronization is not implemented for the native preview.
+- Scroll synchronization is percentage-based, not AST- or heading-based.
 - The Chinese README is not maintained as the source of truth on this branch.
 - The legacy HTML preview assets are kept only for rollback while the native preview migration is evaluated.
 
