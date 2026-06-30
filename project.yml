@@ -21,6 +21,8 @@ settings:
     ENABLE_HARDENED_RUNTIME: true
     CODE_SIGN_IDENTITY: "Apple Development"
     CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "1.2"
+    CURRENT_PROJECT_VERSION: "2"
 
 targets:
   QMark:
@@ -48,6 +50,8 @@ targets:
     info:
       path: QMark/Info.plist
       properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundleDocumentTypes:
           - CFBundleTypeRole: Editor
             LSHandlerRank: Default
@@ -142,6 +146,8 @@ targets:
     info:
       path: QMarkQuickLook/Info.plist
       properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundlePackageType: XPC!
         NSExtension:
           NSExtensionPointIdentifier: com.apple.quicklook.preview
