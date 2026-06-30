@@ -7,7 +7,7 @@
 
 A native macOS Markdown editor built with SwiftUI, MarkdownView, WKWebView, and CodeMirror 6.
 
-[English](README.md) | [Simplified Chinese](README.zh-CN.md)
+[English](README.md) | [Simplified Chinese](README.zh-CN.md) | [Changelog](CHANGELOG.md)
 
 ## Features
 
@@ -53,6 +53,19 @@ bash scripts/download-libs.sh
 ```
 
 > **Note:** Before building, copy `Local.xcconfig.example` to `Local.xcconfig` and set your Apple Developer Team ID, or set `CODE_SIGN_STYLE` to `Manual` in `project.yml` and configure signing as needed.
+
+## Verification
+
+```bash
+# Generate the project and verify the main app plus Quick Look extension build
+make build
+
+# Refresh Quick Look after installing a local build
+qlmanage -r
+qlmanage -r cache
+```
+
+There is no dedicated XCTest target at the moment. Use the Debug build plus manual smoke tests for the editor, native preview, and Finder Quick Look preview.
 
 ## Architecture
 
@@ -102,6 +115,12 @@ scripts/                     — Build scripts for JS dependencies
 | UI Framework | SwiftUI |
 | Project Generation | [XcodeGen](https://github.com/yonaskolb/XcodeGen) |
 | JS Bundling | [esbuild](https://esbuild.github.io/) for the editor bundle |
+
+## Preview Status
+
+- MarkdownView is pinned in `project.yml` to commit `82cf1bba9d2c5fdf52d895506e4142fcbbcfe157`.
+- The main app preview and Quick Look extension share `QMarkMarkdownPreview`, so Markdown rendering behavior stays aligned.
+- The legacy web preview renderer remains in the repository as a rollback path while the MarkdownView migration is evaluated.
 
 ## Current Limitations
 
