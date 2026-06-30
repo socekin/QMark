@@ -9,6 +9,11 @@ options:
   xcodeVersion: "16.0"
   generateEmptyDirectories: true
 
+packages:
+  MarkdownView:
+    url: https://github.com/LiYanan2004/MarkdownView.git
+    revision: 82cf1bba9d2c5fdf52d895506e4142fcbbcfe157
+
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -108,6 +113,8 @@ targets:
         GENERATE_INFOPLIST_FILE: false
     dependencies:
       - target: QMarkQuickLook
+      - package: MarkdownView
+        product: MarkdownView
 
   QMarkQuickLook:
     type: app-extension
@@ -202,3 +209,6 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.qmark.app.quicklook
         PRODUCT_NAME: QMarkQuickLook
         CODE_SIGN_ENTITLEMENTS: QMarkQuickLook/QMarkQuickLook.entitlements
+    dependencies:
+      - package: MarkdownView
+        product: MarkdownView
