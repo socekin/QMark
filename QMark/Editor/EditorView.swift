@@ -1,3 +1,4 @@
+import OSLog
 import SwiftUI
 import WebKit
 
@@ -8,6 +9,22 @@ struct EditorView: NSViewRepresentable {
     var onScrollChange: ((CGFloat) -> Void)?
 
     func makeNSView(context: Context) -> CleanWebView {
+        let signpostID = OSSignpostID(log: QMarkPerformanceLog.pointsOfInterest)
+        os_signpost(
+            .begin,
+            log: QMarkPerformanceLog.pointsOfInterest,
+            name: "EditorView.makeNSView",
+            signpostID: signpostID
+        )
+        defer {
+            os_signpost(
+                .end,
+                log: QMarkPerformanceLog.pointsOfInterest,
+                name: "EditorView.makeNSView",
+                signpostID: signpostID
+            )
+        }
+
         let config = WKWebViewConfiguration()
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
 
