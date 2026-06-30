@@ -3,6 +3,8 @@ import QuickLookUI
 import SwiftUI
 
 class PreviewViewController: NSViewController, @preconcurrency QLPreviewingController {
+    private var previewConstraints: [NSLayoutConstraint] = []
+
     override func loadView() {
         view = NSView()
     }
@@ -29,7 +31,21 @@ class PreviewViewController: NSViewController, @preconcurrency QLPreviewingContr
             .discarded
         })
 
-        view = NSHostingView(rootView: preview)
+        let hostingView = NSHostingView(rootView: preview)
+        hostingView.translatesAutoresizingMaskIntoConstraints = false
+
+        // Keep the controller root view stable because Quick Look's ViewBridge owns it after loadView.
+        NSLayoutConstraint.deactivate(previewConstraints)
+        view.subviews.forEach { $0.removeFromSuperview() }
+        view.addSubview(hostingView)
+        previewConstraints = [
+            hostingView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            hostingView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            hostingView.topAnchor.constraint(equalTo: view.topAnchor),
+            hostingView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ]
+        NSLayoutConstraint.activate(previewConstraints)
+
         handler(nil)
     }
 
