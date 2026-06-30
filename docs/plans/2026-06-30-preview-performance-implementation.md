@@ -4,7 +4,7 @@
 
 **Goal:** Make QMark preview-first, keep opening and Quick Look fast for Markdown files below 5 MB, and restore bidirectional scroll synchronization without replacing the current CodeMirror editor.
 
-**Architecture:** Keep the WKWebView and CodeMirror editor, but instantiate it only when editing is enabled. Move preview rendering behind a dedicated model that can debounce editor updates and stream initial Markdown into MarkdownView. Replace the outer SwiftUI preview scroll with an AppKit-backed scroll container so preview scroll position can be observed and controlled.
+**Architecture:** Keep the WKWebView and CodeMirror editor, but instantiate it only when editing is enabled. Move preview rendering behind a dedicated model that can debounce editor updates and stream initial Markdown into MarkdownView. Keep MarkdownView inside the native SwiftUI preview `ScrollView`, then use macOS 15 scroll geometry and scroll position APIs for preview offset observation and control.
 
 **Tech Stack:** SwiftUI, AppKit, QuickLookUI, WebKit, CodeMirror 6, MarkdownView 3 `StreamingMarkdownReader`, XcodeGen, Swift Package Manager.
 
@@ -454,121 +454,48 @@ git add QMark/Preview/MarkdownPreviewModel.swift QMarkShared/Preview/QMarkMarkdo
 git commit -m "perf: stream markdown preview rendering"
 ```
 
-## Task 6: Add AppKit Preview Scroll Container
+## Task 6: Add Native Preview Scroll Control
 
 **Files:**
-- Create: `QMarkShared/Preview/QMarkMarkdownScrollView.swift`
 - Modify: `QMarkShared/Preview/QMarkMarkdownPreview.swift`
+- Modify: `QMark/Preview/PreviewView.swift`
 
-**Step 1: Create an AppKit-backed scroll container**
+**Step 1: Keep the proven SwiftUI preview scroll path**
 
-Create `QMarkShared/Preview/QMarkMarkdownScrollView.swift`:
+Do not wrap MarkdownView content in an AppKit `NSScrollView`. The preview should remain:
 
 ```swift
-import AppKit
-import SwiftUI
-
-struct QMarkMarkdownScrollView<Content: View>: NSViewRepresentable {
-    let scrollPercentage: CGFloat
-    let onScrollChange: (CGFloat) -> Void
-    @ViewBuilder var content: () -> Content
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onScrollChange: onScrollChange)
-    }
-
-    func makeNSView(context: Context) -> NSScrollView {
-        let scrollView = NSScrollView()
-        scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = false
-        scrollView.autohidesScrollers = true
-        scrollView.drawsBackground = false
-
-        let hostingView = NSHostingView(rootView: content())
-        hostingView.translatesAutoresizingMaskIntoConstraints = false
-
-        let documentView = NSView()
-        documentView.translatesAutoresizingMaskIntoConstraints = false
-        documentView.addSubview(hostingView)
-
-        NSLayoutConstraint.activate([
-            hostingView.leadingAnchor.constraint(equalTo: documentView.leadingAnchor),
-            hostingView.trailingAnchor.constraint(equalTo: documentView.trailingAnchor),
-            hostingView.topAnchor.constraint(equalTo: documentView.topAnchor),
-            hostingView.bottomAnchor.constraint(equalTo: documentView.bottomAnchor),
-            hostingView.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor)
-        ])
-
-        scrollView.documentView = documentView
-        context.coordinator.scrollView = scrollView
-        context.coordinator.observe(scrollView)
-        return scrollView
-    }
-
-    func updateNSView(_ scrollView: NSScrollView, context: Context) {
-        if let hostingView = scrollView.documentView?.subviews.first as? NSHostingView<Content> {
-            hostingView.rootView = content()
-        }
-        context.coordinator.onScrollChange = onScrollChange
-        context.coordinator.scroll(to: scrollPercentage)
-    }
-
-    final class Coordinator: NSObject {
-        weak var scrollView: NSScrollView?
-        var onScrollChange: (CGFloat) -> Void
-        private var isProgrammaticScroll = false
-        private var observer: NSObjectProtocol?
-
-        init(onScrollChange: @escaping (CGFloat) -> Void) {
-            self.onScrollChange = onScrollChange
-        }
-
-        deinit {
-            if let observer {
-                NotificationCenter.default.removeObserver(observer)
-            }
-        }
-
-        func observe(_ scrollView: NSScrollView) {
-            scrollView.contentView.postsBoundsChangedNotifications = true
-            observer = NotificationCenter.default.addObserver(
-                forName: NSView.boundsDidChangeNotification,
-                object: scrollView.contentView,
-                queue: .main
-            ) { [weak self] _ in
-                self?.handleScroll()
-            }
-        }
-
-        func scroll(to percentage: CGFloat) {
-            guard let scrollView, let documentView = scrollView.documentView else { return }
-            let maxY = max(0, documentView.bounds.height - scrollView.contentView.bounds.height)
-            guard maxY > 0 else { return }
-            isProgrammaticScroll = true
-            scrollView.contentView.scroll(to: NSPoint(x: 0, y: maxY * max(0, min(1, percentage))))
-            scrollView.reflectScrolledClipView(scrollView.contentView)
-            isProgrammaticScroll = false
-        }
-
-        private func handleScroll() {
-            guard isProgrammaticScroll == false,
-                  let scrollView,
-                  let documentView = scrollView.documentView
-            else { return }
-
-            let maxY = max(0, documentView.bounds.height - scrollView.contentView.bounds.height)
-            let percentage = maxY > 0 ? scrollView.contentView.bounds.origin.y / maxY : 0
-            onScrollChange(max(0, min(1, percentage)))
-        }
-    }
+ScrollView {
+    renderedContent
 }
 ```
 
-**Step 2: Replace the outer SwiftUI `ScrollView`**
+This preserves the MarkdownView rendering lifecycle used by the working preview and Quick Look paths.
 
-In `QMarkMarkdownPreview`, replace the outer `ScrollView` with `QMarkMarkdownScrollView`.
+**Step 2: Add preview scroll state**
 
-**Step 3: Verify**
+In `QMarkMarkdownPreview`, add:
+
+```swift
+let scrollPercentage: CGFloat
+let onScrollChange: (CGFloat) -> Void
+let scrollSyncEnabled: Bool
+
+@State private var scrollPosition = ScrollPosition()
+@State private var scrollState = QMarkMarkdownScrollState()
+```
+
+Use `onScrollGeometryChange` to convert `ScrollGeometry` into a clamped percentage, but store high-frequency metrics in a non-publishing state object so scrolling does not continuously invalidate the Markdown render tree. Use `ScrollPosition.scrollTo(y:)` to apply external percentage changes.
+
+**Step 3: Prevent local feedback loops**
+
+When applying an external scroll, suppress preview-originated scroll callbacks briefly and skip changes below a small point tolerance. This keeps the preview from reporting its own programmatic scroll back to `ContentView` as a new user action.
+
+**Step 4: Pass preview scroll values through `PreviewView`**
+
+Pass `scrollPercentage` and `onScrollChange` from `PreviewView` into `QMarkMarkdownPreview`.
+
+**Step 5: Verify**
 
 Run:
 
@@ -580,14 +507,16 @@ open build/Build/Products/Debug/QMark.app tmp/perf/markdown-1mb.md
 Expected:
 
 - Preview scrolls normally.
+- Markdown content is visible; no blank preview is introduced.
 - Text selection still works.
 - Links still open through the existing `openURL` environment handler.
+- Quick Look keeps using the same `QMarkMarkdownPreview` defaults without needing scroll callbacks.
 
-**Step 4: Commit**
+**Step 6: Commit**
 
 ```bash
-git add QMarkShared/Preview/QMarkMarkdownScrollView.swift QMarkShared/Preview/QMarkMarkdownPreview.swift
-git commit -m "feat: add controllable markdown preview scrolling"
+git add QMarkShared/Preview/QMarkMarkdownPreview.swift QMark/Preview/PreviewView.swift docs/plans/2026-06-30-preview-performance-design.md docs/plans/2026-06-30-preview-performance-implementation.md
+git commit -m "feat: add native markdown preview scroll control"
 ```
 
 ## Task 7: Add Bidirectional Scroll Sync
@@ -601,67 +530,40 @@ git commit -m "feat: add controllable markdown preview scrolling"
 
 **Step 1: Add editor scroll setter**
 
-In `EditorRenderer/editor.js`, add:
+In `EditorRenderer/editor.js`, add `window.setScrollPercentage(percentage)`.
 
-```javascript
-window.setScrollPercentage = function(percentage) {
-    const scrollDOM = editor.scrollDOM;
-    const scrollHeight = scrollDOM.scrollHeight - scrollDOM.clientHeight;
-    scrollDOM.scrollTop = scrollHeight > 0 ? scrollHeight * percentage : 0;
-};
-```
+Requirements:
+
+- clamp the percentage to `0...1`;
+- wait for CodeMirror layout with `requestAnimationFrame` when scroll height is not ready;
+- suppress programmatic scroll notifications while applying the scroll.
 
 **Step 2: Add Swift API for editor scrolling**
 
-In `EditorView.Coordinator`, add:
+In `EditorView.Coordinator`, add `syncScrollIfNeeded(_:)` that stores pending scroll values until `editorReady`, skips tiny percentage changes, and calls:
 
 ```swift
-func scrollToPercentage(_ percentage: CGFloat) {
-    guard isEditorReady, let webView else { return }
-    webView.callAsyncJavaScript(
-        "setScrollPercentage(percentage)",
-        arguments: ["percentage": Double(percentage)],
-        in: nil,
-        in: .page,
-        completionHandler: nil
-    )
-}
+webView.callAsyncJavaScript(
+    "setScrollPercentage(percentage)",
+    arguments: ["percentage": Double(clampedPercentage)],
+    in: nil,
+    in: .page,
+    completionHandler: nil
+)
 ```
 
-Expose it through a binding or callback from `ContentView`. Keep the implementation narrow; do not redesign the editor bridge.
+**Step 3: Wire shared scroll state and source guard**
 
-**Step 3: Add scroll source guard**
+In `ContentView`, keep a single shared `scrollPercentage` plus a short-lived `activeScrollSource`.
 
-In `ContentView`, add:
+- Editor scroll events update the shared value.
+- Preview scroll events update the shared value.
+- `EditorView` consumes the shared value through `scrollPercentage`.
+- `PreviewView` consumes and reports the shared value through `scrollPercentage` and `onScrollChange`.
 
-```swift
-private enum ScrollSource {
-    case editor
-    case preview
-}
+Ignore cross-source scroll reports while another source is active. The renderers also keep local safeguards: CodeMirror suppresses programmatic scroll notifications, and the SwiftUI preview suppresses callbacks while applying external scroll. Both sides throttle high-frequency scroll reports so scrolling does not continuously invalidate the full Markdown preview tree.
 
-@State private var scrollPercentage: CGFloat = 0
-@State private var activeScrollSource: ScrollSource?
-```
-
-When editor scrolls:
-
-```swift
-guard activeScrollSource != .preview else { return }
-activeScrollSource = .editor
-scrollPercentage = percentage
-DispatchQueue.main.async {
-    activeScrollSource = nil
-}
-```
-
-When preview scrolls, use the symmetric `.preview` source.
-
-**Step 4: Wire preview scroll callbacks**
-
-Pass `scrollPercentage` and `onScrollChange` from `PreviewView` into `QMarkMarkdownPreview`, then into `QMarkMarkdownScrollView`.
-
-**Step 5: Verify**
+**Step 4: Verify**
 
 Run:
 
@@ -674,10 +576,11 @@ Expected:
 
 - Scrolling the editor moves the preview.
 - Scrolling the preview moves the editor.
+- Opening the editor after scrolling the preview applies the current preview position after CodeMirror layout is ready.
 - The panes do not jitter or fight each other.
 - Selection in the editor remains responsive while scrolling.
 
-**Step 6: Commit**
+**Step 5: Commit**
 
 ```bash
 git add EditorRenderer/editor.js QMark/Editor/EditorView.swift QMark/Preview/PreviewView.swift QMark/ContentView.swift QMarkShared/Preview/QMarkMarkdownPreview.swift

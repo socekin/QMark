@@ -57,15 +57,38 @@ const markdownKeymap = keymap.of([
 function setupScrollSync(view) {
     const scrollDOM = view.scrollDOM;
     scrollDOM.addEventListener("scroll", () => {
+        if (suppressScrollNotification) {
+            return;
+        }
+
         const scrollTop = scrollDOM.scrollTop;
         const scrollHeight = scrollDOM.scrollHeight - scrollDOM.clientHeight;
         const percentage = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
-        postMessage("scrollChanged", percentage);
+        scheduleScrollNotification(percentage);
     });
 }
 
 // ── Swift → JS API state ──
 let suppressChangeNotification = false;
+let suppressScrollNotification = false;
+let applyScrollFrame = null;
+let releaseScrollSuppressionFrame = null;
+let pendingScrollResolve = null;
+let pendingScrollNotificationFrame = null;
+let pendingScrollNotificationPercentage = 0;
+
+function scheduleScrollNotification(percentage) {
+    pendingScrollNotificationPercentage = Math.max(0, Math.min(1, percentage));
+
+    if (pendingScrollNotificationFrame !== null) {
+        return;
+    }
+
+    pendingScrollNotificationFrame = requestAnimationFrame(() => {
+        pendingScrollNotificationFrame = null;
+        postMessage("scrollChanged", pendingScrollNotificationPercentage);
+    });
+}
 
 // ── 语法高亮定义（匹配 MarkEdit GitHub Light/Dark） ──
 const lightHighlight = HighlightStyle.define([
@@ -205,6 +228,61 @@ window.setContent = function(text) {
         changes: {from: 0, to: editor.state.doc.length, insert: text}
     });
     suppressChangeNotification = false;
+};
+
+window.setScrollPercentage = function(percentage) {
+    const clampedPercentage = Math.max(0, Math.min(1, Number(percentage) || 0));
+    let attemptsRemaining = 60;
+
+    if (applyScrollFrame !== null) {
+        cancelAnimationFrame(applyScrollFrame);
+        applyScrollFrame = null;
+    }
+    if (pendingScrollResolve !== null) {
+        pendingScrollResolve(false);
+        pendingScrollResolve = null;
+    }
+
+    return new Promise((resolve) => {
+        pendingScrollResolve = resolve;
+
+        const finish = (applied) => {
+            applyScrollFrame = null;
+            pendingScrollResolve = null;
+            resolve(applied);
+        };
+
+        const applyScroll = () => {
+            const scrollDOM = editor.scrollDOM;
+            const scrollHeight = scrollDOM.scrollHeight - scrollDOM.clientHeight;
+
+            if (scrollHeight <= 0 && attemptsRemaining > 0) {
+                attemptsRemaining -= 1;
+                applyScrollFrame = requestAnimationFrame(applyScroll);
+                return;
+            }
+
+            if (scrollHeight <= 0) {
+                finish(false);
+                return;
+            }
+
+            suppressScrollNotification = true;
+            scrollDOM.scrollTop = scrollHeight * clampedPercentage;
+
+            if (releaseScrollSuppressionFrame !== null) {
+                cancelAnimationFrame(releaseScrollSuppressionFrame);
+            }
+            releaseScrollSuppressionFrame = requestAnimationFrame(() => {
+                suppressScrollNotification = false;
+                releaseScrollSuppressionFrame = null;
+            });
+
+            finish(true);
+        };
+
+        applyScrollFrame = requestAnimationFrame(applyScroll);
+    });
 };
 
 window.getContent = function() {

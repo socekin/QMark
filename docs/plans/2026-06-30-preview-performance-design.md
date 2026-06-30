@@ -97,10 +97,10 @@ Use percentage-based sync as the first implementation. It is cheap, resilient to
 Add:
 
 - editor-to-preview sync from CodeMirror scroll events;
-- preview-to-editor sync from the preview scroll container;
-- a scroll source guard to avoid feedback loops.
+- preview-to-editor sync from SwiftUI preview scroll geometry;
+- a shared source guard in `ContentView` plus local renderer suppression to avoid feedback loops.
 
-SwiftUI `ScrollView` is not enough because QMark needs programmatic scroll control and scroll offset observation. Replace the outer preview scroll with an AppKit-backed `NSScrollView` wrapper that hosts the MarkdownView content.
+Keep the preview on the native SwiftUI `ScrollView` path used by MarkdownView. macOS 15 provides `ScrollPosition` and `onScrollGeometryChange`, which are enough for percentage-based offset observation and programmatic scrolling without wrapping MarkdownView content in an AppKit `NSScrollView`.
 
 ### 6. Instrumentation
 

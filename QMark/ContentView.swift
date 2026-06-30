@@ -35,6 +35,8 @@ struct ContentView: View {
     @StateObject private var previewModel = MarkdownPreviewModel()
     @State private var markdownText: String = ""
     @State private var scrollPercentage: CGFloat = 0
+    @State private var activeScrollSource: ScrollSource?
+    @State private var releaseScrollSourceTask: Task<Void, Never>?
     @State private var isEditorVisible: Bool = false
     @State private var editorWidthRatio: CGFloat = 0.5
     @State private var isDarkMode: Bool = false
@@ -52,12 +54,13 @@ struct ContentView: View {
                     EditorView(
                         document: document,
                         isDark: isDarkMode,
+                        scrollPercentage: scrollPercentage,
                         onTextChange: { text in
                             markdownText = text
                             previewModel.scheduleUpdate(text)
                         },
                         onScrollChange: { percentage in
-                            scrollPercentage = percentage
+                            updateScrollPercentage(percentage, from: .editor)
                         }
                     )
                     .frame(width: editorWidth(in: geo.size.width))
@@ -90,7 +93,10 @@ struct ContentView: View {
                 PreviewView(
                     source: previewModel.previewSource,
                     scrollPercentage: scrollPercentage,
-                    isDark: isDarkMode
+                    isDark: isDarkMode,
+                    onScrollChange: { percentage in
+                        updateScrollPercentage(percentage, from: .preview)
+                    }
                 )
             }
             .coordinateSpace(name: "splitView")
@@ -102,6 +108,10 @@ struct ContentView: View {
         }
         .onChange(of: appTheme) {
             applyTheme(selectedTheme)
+        }
+        .onDisappear {
+            releaseScrollSourceTask?.cancel()
+            activeScrollSource = nil
         }
         // 监听系统主题变更，"跟随系统"模式下需要重新设置显式外观
         .onReceive(DistributedNotificationCenter.default().publisher(for: Notification.Name("AppleInterfaceThemeChangedNotification"))) { _ in
@@ -151,6 +161,22 @@ struct ContentView: View {
         return max(300, min(width, totalWidth - 300))
     }
 
+    @MainActor
+    private func updateScrollPercentage(_ percentage: CGFloat, from source: ScrollSource) {
+        guard activeScrollSource == nil || activeScrollSource == source else { return }
+
+        activeScrollSource = source
+        scrollPercentage = max(0, min(1, percentage))
+
+        releaseScrollSourceTask?.cancel()
+        releaseScrollSourceTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(140))
+            if activeScrollSource == source {
+                activeScrollSource = nil
+            }
+        }
+    }
+
     /// 始终设置显式 NSAppearance，并更新 isDarkMode 驱动编辑器主题切换
     private func applyTheme(_ theme: AppTheme) {
         let dark: Bool
@@ -170,4 +196,9 @@ struct ContentView: View {
             window.appearance = appearance
         }
     }
+}
+
+private enum ScrollSource {
+    case editor
+    case preview
 }
