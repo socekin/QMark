@@ -30,6 +30,8 @@ targets:
     sources:
       - path: QMark
         type: group
+      - path: QMarkShared
+        type: group
       - path: SharedRenderer
         type: folder
         buildPhase: resources
@@ -121,6 +123,8 @@ targets:
     platform: macOS
     sources:
       - path: QMarkQuickLook
+        type: group
+      - path: QMarkShared
         type: group
       - path: SharedRenderer
         type: folder
