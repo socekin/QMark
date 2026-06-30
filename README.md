@@ -132,6 +132,14 @@ bash scripts/download-libs.sh
 
 There is no dedicated XCTest target yet. Use the Debug build plus manual smoke testing.
 
+Generate local performance fixtures:
+
+```bash
+scripts/generate-markdown-fixtures.sh
+```
+
+Use the generated files in `tmp/perf/` for app and Quick Look smoke testing.
+
 Recommended local verification:
 
 ```bash
