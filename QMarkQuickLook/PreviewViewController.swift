@@ -13,7 +13,7 @@ class PreviewViewController: NSViewController, @preconcurrency QLPreviewingContr
         at url: URL,
         completionHandler handler: @escaping (Error?) -> Void
     ) {
-        QMarkPerformanceLog.logger.info("Quick Look prepare started for \(url.lastPathComponent, privacy: .public)")
+        QMarkPerformanceLog.logger.info("Quick Look prepare started")
 
         guard let markdownData = try? Data(contentsOf: url),
               let markdownText = String(data: markdownData, encoding: .utf8)
@@ -23,7 +23,7 @@ class PreviewViewController: NSViewController, @preconcurrency QLPreviewingContr
             ]))
             return
         }
-        QMarkPerformanceLog.logger.info("Quick Look decoded \(markdownText.utf8.count, privacy: .public) bytes")
+        QMarkPerformanceLog.logger.info("Quick Look decoded \(markdownData.count, privacy: .public) bytes")
 
         let preview = QMarkMarkdownPreview(
             markdown: markdownText,
