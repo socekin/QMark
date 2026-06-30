@@ -2,8 +2,13 @@ import AppKit
 import SwiftUI
 import MarkdownView
 
+enum QMarkMarkdownPreviewSource {
+    case text(String)
+    case streaming(StreamingMarkdownSource)
+}
+
 struct QMarkMarkdownPreview: View {
-    let markdown: String
+    let source: QMarkMarkdownPreviewSource
     let isDark: Bool
     let baseURL: URL?
 
@@ -12,17 +17,27 @@ struct QMarkMarkdownPreview: View {
         isDark: Bool = false,
         baseURL: URL? = nil
     ) {
-        self.markdown = markdown
+        self.init(
+            source: .text(markdown),
+            isDark: isDark,
+            baseURL: baseURL
+        )
+    }
+
+    init(
+        source: QMarkMarkdownPreviewSource,
+        isDark: Bool = false,
+        baseURL: URL? = nil
+    ) {
+        self.source = source
         self.isDark = isDark
         self.baseURL = baseURL
     }
 
     var body: some View {
         ScrollView {
-            MarkdownReader(markdown) { parseResult in
-                MarkdownView(parseResult)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+            renderedContent
+                .frame(maxWidth: .infinity, alignment: .leading)
             .markdownMathRenderingEnabled()
             .markdownLinksUnderlined()
             .markdownTableStyle(.github)
@@ -35,6 +50,20 @@ struct QMarkMarkdownPreview: View {
         .background(Color(nsColor: .textBackgroundColor))
         .environment(\.colorScheme, isDark ? .dark : .light)
         .textSelection(.enabled)
+    }
+
+    @ViewBuilder
+    private var renderedContent: some View {
+        switch source {
+        case .text(let markdown):
+            MarkdownReader(markdown) { parseResult in
+                MarkdownView(parseResult)
+            }
+        case .streaming(let source):
+            StreamingMarkdownReader(source) { parseResult in
+                MarkdownView(parseResult)
+            }
+        }
     }
 }
 

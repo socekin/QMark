@@ -88,7 +88,7 @@ struct ContentView: View {
 
                 // 右侧：预览
                 PreviewView(
-                    markdown: previewModel.markdown,
+                    source: previewModel.previewSource,
                     scrollPercentage: scrollPercentage,
                     isDark: isDarkMode
                 )

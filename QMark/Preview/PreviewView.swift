@@ -2,13 +2,35 @@ import AppKit
 import SwiftUI
 
 struct PreviewView: View {
-    let markdown: String
+    let source: QMarkMarkdownPreviewSource
     let scrollPercentage: CGFloat
-    var isDark: Bool = false
+    let isDark: Bool
+
+    init(
+        source: QMarkMarkdownPreviewSource,
+        scrollPercentage: CGFloat,
+        isDark: Bool = false
+    ) {
+        self.source = source
+        self.scrollPercentage = scrollPercentage
+        self.isDark = isDark
+    }
+
+    init(
+        markdown: String,
+        scrollPercentage: CGFloat,
+        isDark: Bool = false
+    ) {
+        self.init(
+            source: .text(markdown),
+            scrollPercentage: scrollPercentage,
+            isDark: isDark
+        )
+    }
 
     var body: some View {
         QMarkMarkdownPreview(
-            markdown: markdown,
+            source: source,
             isDark: isDark
         )
         .environment(\.openURL, OpenURLAction { url in
