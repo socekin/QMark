@@ -1,27 +1,26 @@
 import Foundation
-import MarkdownView
 
 @MainActor
 final class MarkdownPreviewModel: ObservableObject {
-    enum Mode {
-        case immediate
-        case debounced
-    }
-
     @Published private(set) var markdown: String = ""
 
     private var pendingTask: Task<Void, Never>?
+    private var pendingTaskID: UUID?
 
     func load(_ text: String) {
         pendingTask?.cancel()
+        pendingTask = nil
+        pendingTaskID = nil
         markdown = text
     }
 
     func scheduleUpdate(_ text: String) {
         pendingTask?.cancel()
         let delay = Self.delay(forByteCount: text.utf8.count)
+        let taskID = UUID()
+        pendingTaskID = taskID
 
-        pendingTask = Task { [weak self] in
+        pendingTask = Task { [weak self, taskID] in
             do {
                 try await Task.sleep(for: delay)
             } catch {
@@ -29,7 +28,10 @@ final class MarkdownPreviewModel: ObservableObject {
             }
             guard Task.isCancelled == false else { return }
             await MainActor.run {
+                guard self?.pendingTaskID == taskID else { return }
                 self?.markdown = text
+                self?.pendingTask = nil
+                self?.pendingTaskID = nil
             }
         }
     }
